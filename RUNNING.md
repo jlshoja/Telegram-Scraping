@@ -42,7 +42,34 @@ python scrape.py      # (or python scrape.py --wait-file for a fresh login)
 python fill.py
 ```
 
-### 4️⃣ Download product photos & videos (optional)
+> `scrape.py` is incremental: it only downloads posts it hasn't seen before (tracked in `cache/posts.json`).
+
+### 4️⃣ New products? Just rerun — old ones are skipped
+
+Reruns only touch what's new:
+- `python fill.py` never overwrites filled cells — new Excel rows get matched and filled, old rows are left alone
+- `python fill.py --download-media` skips photos/videos already in `media/`
+- Each product's media source post is tracked in `media/manifest.json` — if a product gets reposted, old files are deleted and fresh ones downloaded automatically
+
+```powershell
+python scrape.py                  # pick up new channel posts (incremental)
+python fill.py --download-media   # fill new rows + download new media
+```
+
+Only specific new products? Filter by code:
+
+```powershell
+python fill.py --download-media --codes FA-9999,TR-123
+```
+
+Want to overwrite old values with fresh data (e.g. a post was corrected)?
+
+```powershell
+python fill.py --refresh                       # refresh text fields
+python fill.py --download-media --refresh      # refresh text fields + photo names
+```
+
+### 5️⃣ Download product photos & videos (optional)
 
 ```powershell
 python fill.py --download-media
@@ -65,6 +92,8 @@ python fill.py --download-media
 | **First login** (one‑off) | `python scrape.py --login --phone "+989143463191" --wait-file` |
 | **Regular fill** (cached) | `python fill.py` |
 | **Fill + download media** | `python fill.py --download-media` |
+| **Only new products** | `python scrape.py` then `python fill.py --download-media` (old rows/files skipped) |
+| **Refresh old values** | `python fill.py --refresh` |
 | **Re‑scan channels** | `python scrape.py` then `python fill.py` |
 | **Check the report** | `type report.txt` or open `report.txt` |
 

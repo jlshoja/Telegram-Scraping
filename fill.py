@@ -36,7 +36,33 @@ COL = {  # 1-based excel columns
 }
 
 MEDIA_DIR = Path("media")
+MANIFEST_FILE = MEDIA_DIR / "manifest.json"
 MAX_WEBP_SIZE_KB = 100
+
+
+def load_manifest():
+    try:
+        return json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_manifest(data):
+    MEDIA_DIR.mkdir(exist_ok=True)
+    MANIFEST_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def clear_code_media(code):
+    """Delete all downloaded files for a code (source post changed)."""
+    removed = []
+    for pat in (f"{code}-*.webp", f"{code}-V*"):
+        for p in MEDIA_DIR.glob(pat):
+            try:
+                p.unlink()
+                removed.append(p.name)
+            except OSError:
+                pass
+    return removed
 
 
 def usage_to_category(usage):
@@ -377,7 +403,7 @@ def main(args):
             if name not in fields:
                 continue
             cell = ws.cell(row, COL[name])
-            if cell.value not in (None, ""):
+            if cell.value not in (None, "") and not args.refresh:
                 stats["kept_existing"].append((row, code, name, cell.value))
                 continue
             cell.value = fields[name]
@@ -388,7 +414,7 @@ def main(args):
 
     for row in range(2, ws.max_row + 1):
         cat_cell = ws.cell(row, COL["دسته بندی"])
-        if cat_cell.value not in (None, ""):
+        if cat_cell.value not in (None, "") and not args.refresh:
             continue
         usage = ws.cell(row, COL["کاربرد"]).value
         if usage in (None, ""):
@@ -398,9 +424,25 @@ def main(args):
 
     if args.download_media and matched:
         MEDIA_DIR.mkdir(exist_ok=True)
+        manifest = load_manifest()
+        for code, (_row, ch, mid) in matched.items():
+            old = manifest.get(code)
+            if old and (old.get("channel"), old.get("id")) != (ch, mid):
+                removed = clear_code_media(code)
+                print(f"{code}: source post changed "
+                      f"({old.get('channel')} #{old.get('id')} -> {ch} #{mid}), "
+                      f"removed {len(removed)} old files")
         jobs = [(code, ch, mid) for code, (_row, ch, mid) in matched.items()]
         print(f"downloading media for {len(jobs)} products...")
-        results = asyncio.run(download_all(jobs))
+        try:
+            results = asyncio.run(download_all(jobs))
+        except SystemExit as exc:
+            print(exc)
+            results = {}
+        except Exception as exc:
+            print(f"media download failed: {type(exc).__name__} {exc}")
+            print("(is the proxy/VPN running? check TG_PROXY in .env)")
+            results = {}
         for code, (photos, videos, notes) in results.items():
             row = matched[code][0]
             stats["media"].append((row, code, photos, videos, notes))
@@ -408,10 +450,13 @@ def main(args):
             # a previous run already saved, so list everything on disk.
             disk_photos = sorted(p.name for p in MEDIA_DIR.glob(f"{code}-*.webp"))
             disk_videos = sorted(p.name for p in MEDIA_DIR.glob(f"{code}-V*"))
+            manifest[code] = {"channel": matched[code][1], "id": matched[code][2],
+                              "photos": disk_photos, "videos": disk_videos}
             if photo_col and disk_photos:
                 cell = ws.cell(row, photo_col)
-                if cell.value in (None, ""):
+                if cell.value in (None, "") or args.refresh:
                     cell.value = " | ".join(disk_photos)
+        save_manifest(manifest)
 
     wb.save(DST)
     print(f"saved {DST}")
@@ -466,6 +511,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--download-media", action="store_true",
                     help="download product photos (WebP <100KB) and videos from Telegram")
+    ap.add_argument("--refresh", action="store_true",
+                    help="overwrite already-filled cells with fresh values")
     ap.add_argument("--codes", default="",
                     help="only process these product codes, comma-separated (for testing)")
     args = ap.parse_args()
