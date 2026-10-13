@@ -5,6 +5,23 @@
 
 ---
 
+## 🖱 Easiest: double-click `run.bat`
+
+A menu with all running options — just type the number. You can also pass the
+option directly: `run.bat 2` (fill + media), `run.bat 4 FA-1959,TR-402`
+(specific codes).
+
+| # | Action |
+|---|--------|
+| 1 | Fill Excel (cached posts) |
+| 2 | Fill Excel + download media |
+| 3 | Rescan channels, then fill + media |
+| 4 | Fill specific codes |
+| 5 | Refresh old values with fresh data |
+| 6 | Telegram login (first time only) |
+
+---
+
 ## 🚀 Quick start
 
 ### 1️⃣ First‑time login (only once)
