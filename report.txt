@@ -1,28 +1,83 @@
-posts: 1634
-rows filled: 0
-rows without code: 1372
+posts: 1637
+rows filled: 10
+rows without code: 1370
 
 == seller -> channel used ==
-  کیف بامبو -> تولید و پخش کیف بامبو (45)
+  کیف بامبو -> تولید و پخش کیف بامبو (42)
   فارسیس -> گالری کیف محبوب(فاسیس) (39)
   کیف ترافیک -> کیف و کفش ترافیک (33)
   شهر کیف -> شهر کیف | Shahre kif (15)
   کیف ترافیک -> شهر کیف | Shahre kif (12)
+  مراس -> کیف‌ مولتی برند بازار تهران (12)
   کیف بامبو -> گالری کیف محبوب(فاسیس) (9)
-  مراس -> کیف‌ مولتی برند بازار تهران (9)
 
-== filled (0) ==
-== دسته بندی derived from کاربرد (0) ==
-== invalid code (1) ==
+== filled (10) ==
+  row 17: BA-1981  [تولید و پخش کیف بامبو #4558]  کاربرد=دوشی
+  row 20: BA-1488  [تولید و پخش کیف بامبو #4165]  کاربرد=دوشی
+  row 21: BA-1486  [تولید و پخش کیف بامبو #3859]  کاربرد=روزمره
+  row 22: BA-1413  [تولید و پخش کیف بامبو #3694]  کاربرد=دوشی
+  row 23: BA-1933  [تولید و پخش کیف بامبو #3973]  کاربرد=دوشی
+  row 24: BA-1482  [تولید و پخش کیف بامبو #3914]  کاربرد=اداری
+  row 25: BA-1494  [تولید و پخش کیف بامبو #4595]  کاربرد=دوشی | روزمره | اداری | کوله
+  row 26: BA-1330  [تولید و پخش کیف بامبو #4488]  کاربرد=دوشی | اداری
+  row 27: BA-1280  [تولید و پخش کیف بامبو #4288]  کاربرد=کوله
+  row 28: BA-1442  [تولید و پخش کیف بامبو #4134]  کاربرد=کوله
+== دسته بندی derived from کاربرد (9) ==
+  row 31: شرانگ  ->  کیف شرانگ زنانه
+  row 32: پاریس  ->  کیف پاریس زنانه
+  row 33: پاریس  ->  کیف پاریس زنانه
+  row 34: پاریس  ->  کیف پاریس زنانه
+  row 36: شرانگ  ->  کیف شرانگ زنانه
+  row 37: شرانگ خارجی  ->  کیف شرانگ خارجی زنانه
+  row 39: چرم PU Microfiber شرانگ درجه یک وارداتی  ->  کیف چرم PU Microfiber شرانگ درجه یک وارداتی زنانه
+  row 41: چرم Microsuede اشبالت درجه یک وارداتی  ->  کیف چرم Microsuede اشبالت درجه یک وارداتی زنانه
+  row 42: چرم PU Microfiber شرانگ درجه یک وارداتی  ->  کیف چرم PU Microfiber شرانگ درجه یک وارداتی زنانه
+== media (33) ==
+  row 2: FA-1959 -> FA-1959-1.webp, FA-1959-2.webp, FA-1959-3.webp, FA-1959-4.webp, FA-1959-5.webp, FA-1959-6.webp, FA-1959-7.webp (FA-1959-1.webp exists, skipped; FA-1959-2.webp exists, skipped; FA-1959-3.webp exists, skipped; FA-1959-4.webp exists, skipped; FA-1959-5.webp exists, skipped; FA-1959-6.webp exists, skipped; FA-1959-7.webp exists, skipped)
+  row 3: FA-2209 -> FA-2209-1.webp, FA-2209-2.webp, FA-2209-3.webp, FA-2209-4.webp (FA-2209-1.webp exists, skipped; FA-2209-2.webp exists, skipped; FA-2209-3.webp exists, skipped; FA-2209-4.webp exists, skipped)
+  row 4: FA-1990 -> FA-1990-1.webp, FA-1990-2.webp, FA-1990-3.webp, FA-1990-4.webp, FA-1990-5.webp, FA-1990-6.webp (FA-1990-1.webp exists, skipped; FA-1990-2.webp exists, skipped; FA-1990-3.webp exists, skipped; FA-1990-4.webp exists, skipped; FA-1990-5.webp exists, skipped; FA-1990-6.webp exists, skipped)
+  row 5: FA-1863 -> FA-1863-1.webp, FA-1863-2.webp, FA-1863-3.webp, FA-1863-4.webp, FA-1863-5.webp, FA-1863-6.webp (FA-1863-1.webp exists, skipped; FA-1863-2.webp exists, skipped; FA-1863-3.webp exists, skipped; FA-1863-4.webp exists, skipped; FA-1863-5.webp exists, skipped; FA-1863-6.webp exists, skipped)
+  row 7: FA-1868 -> FA-1868-1.webp, FA-1868-2.webp, FA-1868-3.webp, FA-1868-4.webp, FA-1868-5.webp (FA-1868-1.webp exists, skipped; FA-1868-2.webp exists, skipped; FA-1868-3.webp exists, skipped; FA-1868-4.webp exists, skipped; FA-1868-5.webp exists, skipped)
+  row 9: FA-1944 -> FA-1944-1.webp, FA-1944-2.webp (FA-1944-1.webp exists, skipped; FA-1944-2.webp exists, skipped)
+  row 10: FA-2024 -> FA-2024-1.webp, FA-2024-2.webp, FA-2024-3.webp, FA-2024-4.webp, FA-2024-5.webp, FA-2024-6.webp, FA-2024-7.webp (FA-2024-1.webp exists, skipped; FA-2024-2.webp exists, skipped; FA-2024-3.webp exists, skipped; FA-2024-4.webp exists, skipped; FA-2024-5.webp exists, skipped; FA-2024-6.webp exists, skipped; FA-2024-7.webp exists, skipped)
+  row 11: FA-2093 -> FA-2093-1.webp, FA-2093-2.webp, FA-2093-3.webp, FA-2093-4.webp, FA-2093-5.webp, FA-2093-6.webp, FA-2093-7.webp (FA-2093-1.webp exists, skipped; FA-2093-2.webp exists, skipped; FA-2093-3.webp exists, skipped; FA-2093-4.webp exists, skipped; FA-2093-5.webp exists, skipped; FA-2093-6.webp exists, skipped; FA-2093-7.webp exists, skipped)
+  row 12: FA-2091 -> FA-2091-1.webp, FA-2091-2.webp, FA-2091-3.webp, FA-2091-4.webp, FA-2091-5.webp, FA-2091-6.webp, FA-2091-7.webp (FA-2091-1.webp exists, skipped; FA-2091-2.webp exists, skipped; FA-2091-3.webp exists, skipped; FA-2091-4.webp exists, skipped; FA-2091-5.webp exists, skipped; FA-2091-6.webp exists, skipped; FA-2091-7.webp exists, skipped)
+  row 13: SHK-649 -> SHK-649-1.webp, SHK-649-2.webp, SHK-649-3.webp, SHK-649-4.webp, SHK-649-5.webp, SHK-649-6.webp (SHK-649-1.webp exists, skipped; SHK-649-2.webp exists, skipped; SHK-649-3.webp exists, skipped; SHK-649-4.webp exists, skipped; SHK-649-5.webp exists, skipped; SHK-649-6.webp exists, skipped)
+  row 14: SHK-655 -> SHK-655-1.webp, SHK-655-2.webp, SHK-655-3.webp (SHK-655-1.webp exists, skipped; SHK-655-2.webp exists, skipped; SHK-655-3.webp exists, skipped)
+  row 15: SHK-659 -> SHK-659-1.webp, SHK-659-2.webp, SHK-659-3.webp, SHK-659-4.webp (SHK-659-1.webp exists, skipped; SHK-659-2.webp exists, skipped; SHK-659-3.webp exists, skipped; SHK-659-4.webp exists, skipped)
+  row 16: SHK-680 -> SHK-680-1.webp, SHK-680-2.webp, SHK-680-3.webp (SHK-680-1.webp exists, skipped; SHK-680-2.webp exists, skipped; SHK-680-3.webp exists, skipped)
+  row 17: BA-1981 -> BA-1981-1.webp (BA-1981-1.webp exists, skipped)
+  row 20: BA-1488 -> BA-1488-1.webp (BA-1488-1.webp exists, skipped)
+  row 21: BA-1486 -> BA-1486-1.webp (BA-1486-1.webp exists, skipped)
+  row 22: BA-1413 -> BA-1413-1.webp (BA-1413-1.webp exists, skipped)
+  row 23: BA-1933 -> BA-1933-1.webp (BA-1933-1.webp exists, skipped)
+  row 24: BA-1482 -> BA-1482-1.webp (BA-1482-1.webp exists, skipped)
+  row 25: BA-1494 -> BA-1494-1.webp (BA-1494-1.webp exists, skipped)
+  row 26: BA-1330 -> BA-1330-1.webp (BA-1330-1.webp exists, skipped)
+  row 27: BA-1280 -> BA-1280-1.webp (BA-1280-1.webp exists, skipped)
+  row 28: BA-1442 -> BA-1442-1.webp (BA-1442-1.webp exists, skipped)
+  row 31: TR-402 -> TR-402-1.webp, TR-402-2.webp, TR-402-3.webp, TR-402-4.webp, TR-402-5.webp, TR-402-6.webp, TR-402-V.mp4 (TR-402-1.webp exists, skipped; TR-402-2.webp exists, skipped; TR-402-3.webp exists, skipped; TR-402-4.webp exists, skipped; TR-402-5.webp exists, skipped; TR-402-6.webp exists, skipped; TR-402-V.mp4 exists, skipped)
+  row 32: TR-439 -> TR-439-1.webp, TR-439-2.webp, TR-439-3.webp, TR-439-4.webp (TR-439-1.webp exists, skipped; TR-439-2.webp exists, skipped; TR-439-3.webp exists, skipped; TR-439-4.webp exists, skipped; msg 3257 download timed out)
+  row 33: TR-429 -> TR-429-1.webp, TR-429-2.webp, TR-429-3.webp, TR-429-4.webp, TR-429-5.webp, TR-429-V.mp4 (TR-429-1.webp exists, skipped; TR-429-2.webp exists, skipped; TR-429-3.webp exists, skipped; TR-429-4.webp exists, skipped; TR-429-5.webp exists, skipped; TR-429-V.mp4 exists, skipped)
+  row 34: TR-258 -> TR-258-1.webp, TR-258-2.webp, TR-258-3.webp, TR-258-4.webp, TR-258-5.webp (TR-258-1.webp exists, skipped; TR-258-2.webp exists, skipped; TR-258-3.webp exists, skipped; TR-258-4.webp exists, skipped; TR-258-5.webp exists, skipped)
+  row 36: TR-445 -> TR-445-1.webp, TR-445-2.webp, TR-445-3.webp, TR-445-4.webp, TR-445-5.webp, TR-445-6.webp, TR-445-V.mp4 (TR-445-1.webp exists, skipped; TR-445-2.webp exists, skipped; TR-445-3.webp exists, skipped; TR-445-4.webp exists, skipped; TR-445-5.webp exists, skipped; TR-445-6.webp exists, skipped; TR-445-V.mp4 exists, skipped)
+  row 37: TR-358 -> TR-358-1.webp, TR-358-2.webp, TR-358-3.webp, TR-358-4.webp, TR-358-5.webp, TR-358-6.webp, TR-358-7.webp, TR-358-V.mp4 (TR-358-1.webp exists, skipped; TR-358-2.webp exists, skipped; TR-358-3.webp exists, skipped; TR-358-4.webp exists, skipped; TR-358-5.webp exists, skipped; TR-358-6.webp exists, skipped; TR-358-7.webp exists, skipped; TR-358-V.mp4 exists, skipped)
+  row 38: MR-5161 -> MR-5161-1.webp, MR-5161-2.webp, MR-5161-3.webp, MR-5161-4.webp
+  row 39: MR-5014 -> MR-5014-1.webp, MR-5014-2.webp, MR-5014-3.webp, MR-5014-4.webp, MR-5014-5.webp, MR-5014-6.webp (MR-5014-1.webp exists, skipped; MR-5014-2.webp exists, skipped; MR-5014-3.webp exists, skipped; MR-5014-4.webp exists, skipped; MR-5014-5.webp exists, skipped; MR-5014-6.webp exists, skipped)
+  row 41: MR-5167 -> MR-5167-1.webp, MR-5167-2.webp, MR-5167-3.webp, MR-5167-4.webp (MR-5167-1.webp exists, skipped; MR-5167-2.webp exists, skipped; MR-5167-3.webp exists, skipped; MR-5167-4.webp exists, skipped)
+  row 42: MR-5083 -> MR-5083-1.webp, MR-5083-2.webp, MR-5083-3.webp, MR-5083-4.webp, MR-5083-5.webp, MR-5083-6.webp, MR-5083-7.webp (MR-5083-1.webp exists, skipped; MR-5083-2.webp exists, skipped; MR-5083-3.webp exists, skipped; MR-5083-4.webp exists, skipped; MR-5083-5.webp exists, skipped; MR-5083-6.webp exists, skipped; MR-5083-7.webp exists, skipped)
+== invalid code (3) ==
   row 47: باربری
+  row 48: ارسال بار تا منزل
+  row 49: هزینه تردد
 == code not found in channels (12) ==
   row 6: FA-2162
-  row 8: FA-2077
-  row 19: BA-1458
+  row 8: FA-2076
+  row 18: BA-1458
+  row 19: BA-1468
   row 29: MK-100231
   row 30: MK-100136
   row 35: TR-455
-  row 38: MR-5141
   row 40: MR-5097
   row 43: MR-3429
   row 44: MR-3397
@@ -54,67 +109,57 @@ rows without code: 1372
   row 9: FA-1944 (2 tied)
   row 20: BA-1488 (2 tied)
   row 26: BA-1330 (2 tied)
-== existing values kept (63) ==
-  row 2: FA-1959 ابعاد=20*25
-  row 3: FA-2209 ابعاد=27*18
-  row 12: FA-2091 ابعاد=30*18
-  row 13: SHK-649 ابعاد=23×15
-  row 13: SHK-649 جنس=پاکو ساده خارجی
-  row 13: SHK-649 نوع بند=بند بلند و مچی قابل تنظیم
-  row 13: SHK-649 کاربرد=دوشی | پاسپورتی
-  row 14: SHK-655 ابعاد=18×25
-  row 14: SHK-655 جنس=پاکو ساده خارجی
-  row 14: SHK-655 نوع بند=بند بلند قابل تنظیم
-  row 14: SHK-655 کاربرد=پاسپورتی
-  row 15: SHK-659 ابعاد=18×23
-  row 15: SHK-659 جنس=پاکو ساده خارجی
-  row 15: SHK-659 نوع بند=بند بلند قابل تنظیم
-  row 15: SHK-659 کاربرد=پاسپورتی
-  row 16: SHK-680 ابعاد=25×16
-  row 16: SHK-680 جنس=چرم پاکو ساده خارجی
-  row 16: SHK-680 نوع بند=بند مچی بند بلند قابل تنظیم
-  row 16: SHK-680 کاربرد=دوشی | پاسپورتی
-  row 17: BA-1482 ابعاد=27*38
-  row 17: BA-1482 کاربرد=اداری
-  row 18: BA-1981 ابعاد=16*28
-  row 18: BA-1981 نوع بند=بند بلند
-  row 18: BA-1981 کاربرد=دوشی
-  row 20: BA-1488 ابعاد=26*38
-  row 20: BA-1488 کاربرد=دوشی
-  row 21: BA-1486 ابعاد=24*30
-  row 21: BA-1486 کاربرد=روزمره
-  row 22: BA-1413 ابعاد=25/16
-  row 22: BA-1413 نوع بند=بند بلند (قابل تنظیم)
-  row 22: BA-1413 کاربرد=دوشی
-  row 23: BA-1933 ابعاد=20*30
-  row 23: BA-1933 نوع بند=بند بلند
-  row 23: BA-1933 کاربرد=دوشی
-  row 24: BA-1482 ابعاد=27*38
-  row 24: BA-1482 کاربرد=اداری
-  row 25: BA-1494 ابعاد=28*38
-  row 25: BA-1494 کاربرد=دوشی | روزمره | اداری | کوله
-  row 26: BA-1330 ابعاد=28*38
-  row 26: BA-1330 نوع بند=بند بلند
-  row 26: BA-1330 کاربرد=دوشی | اداری
-  row 27: BA-1280 ابعاد=27*32
-  row 27: BA-1280 کاربرد=کوله
-  row 28: BA-1442 ابعاد=28*32
-  row 28: BA-1442 کاربرد=کوله
-  row 31: TR-402 ابعاد=17×24
-  row 31: TR-402 جنس=شرانگ
-  row 32: TR-439 ابعاد=12/5×28
-  row 32: TR-439 جنس=پاریس
-  row 33: TR-429 ابعاد=21/5×26
-  row 33: TR-429 جنس=پاریس
-  row 34: TR-258 ابعاد=13×18/5
-  row 34: TR-258 جنس=پاریس
-  row 36: TR-445 ابعاد=10/5×18
-  row 36: TR-445 جنس=شرانگ
-  row 37: TR-358 ابعاد=16×19
-  row 37: TR-358 جنس=شرانگ خارجی
-  row 39: MR-5014 ابعاد=20*27
-  row 39: MR-5014 جنس=چرم PU Microfiber شرانگ درجه یک وارداتی
-  row 41: MR-5167 ابعاد=27*33
-  row 41: MR-5167 جنس=چرم Microsuede اشبالت درجه یک وارداتی
-  row 42: MR-5083 ابعاد=18*22
-  row 42: MR-5083 جنس=چرم PU Microfiber شرانگ درجه یک وارداتی
+== existing values kept (53) ==
+  row 2: FA-1959 ابعاد==I2*1.3
+  row 3: FA-2209 ابعاد==I3*1.3
+  row 12: FA-2091 ابعاد==I12*1.3
+  row 13: SHK-649 ابعاد==I13*1.3
+  row 13: SHK-649 جنس==K13*G13
+  row 13: SHK-649 نوع بند=23×15
+  row 13: SHK-649 کاربرد=پاکو ساده خارجی
+  row 14: SHK-655 ابعاد==I14*1.3
+  row 14: SHK-655 جنس==K14*G14
+  row 14: SHK-655 نوع بند=18×25
+  row 14: SHK-655 کاربرد=پاکو ساده خارجی
+  row 15: SHK-659 ابعاد==I15*1.3
+  row 15: SHK-659 جنس==K15*G15
+  row 15: SHK-659 نوع بند=18×23
+  row 15: SHK-659 کاربرد=پاکو ساده خارجی
+  row 16: SHK-680 ابعاد==I16*1.3
+  row 16: SHK-680 جنس==K16*G16
+  row 16: SHK-680 نوع بند=25×16
+  row 16: SHK-680 کاربرد=چرم پاکو ساده خارجی
+  row 17: BA-1981 ابعاد==I17*1.3
+  row 17: BA-1981 نوع بند=16*28
+  row 20: BA-1488 ابعاد==I20*1.3
+  row 21: BA-1486 ابعاد==I21*1.3
+  row 22: BA-1413 ابعاد==I22*1.3
+  row 22: BA-1413 نوع بند=25/16
+  row 23: BA-1933 ابعاد==I23*1.3
+  row 23: BA-1933 نوع بند=20*30
+  row 24: BA-1482 ابعاد==I24*1.3
+  row 25: BA-1494 ابعاد==I25*1.3
+  row 26: BA-1330 ابعاد==I26*1.3
+  row 26: BA-1330 نوع بند=28*38
+  row 27: BA-1280 ابعاد==I27*1.3
+  row 28: BA-1442 ابعاد==I28*1.3
+  row 31: TR-402 ابعاد==I31*1.3
+  row 31: TR-402 جنس==K31*G31
+  row 32: TR-439 ابعاد==I32*1.3
+  row 32: TR-439 جنس==K32*G32
+  row 33: TR-429 ابعاد==I33*1.3
+  row 33: TR-429 جنس==K33*G33
+  row 34: TR-258 ابعاد==I34*1.3
+  row 34: TR-258 جنس==K34*G34
+  row 36: TR-445 ابعاد==I36*1.3
+  row 36: TR-445 جنس==K36*G36
+  row 37: TR-358 ابعاد==I37*1.3
+  row 37: TR-358 جنس==K37*G37
+  row 38: MR-5161 ابعاد==I38*1.3
+  row 38: MR-5161 جنس==K38*G38
+  row 39: MR-5014 ابعاد==I39*1.3
+  row 39: MR-5014 جنس==K39*G39
+  row 41: MR-5167 ابعاد==I41*1.3
+  row 41: MR-5167 جنس==K41*G41
+  row 42: MR-5083 ابعاد==I42*1.3
+  row 42: MR-5083 جنس==K42*G42

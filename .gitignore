@@ -5,4 +5,5 @@ __pycache__/
 ~$*.xlsx
 *.session
 *.session-journal
+# legacy output, no longer generated (media download removed)
 media/

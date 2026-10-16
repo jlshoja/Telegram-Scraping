@@ -8,11 +8,11 @@ echo  ========================================
 echo   Telegram Scraping - Runner
 echo  ========================================
 echo   1. Fill Excel (cached posts)
-echo   2. Fill Excel + download media
-echo   3. Rescan channels, then fill + media
-echo   4. Fill specific codes (e.g. FA-1959,TR-402)
-echo   5. Refresh old values with fresh data
-echo   6. Telegram login (first time only)
+echo   2. Rescan channels, then fill
+echo   3. Fill specific codes (e.g. FA-1959,TR-402)
+echo   4. Refresh old values with fresh data
+echo   5. Telegram login (first time only)
+echo   6. Build WooCommerce import sheet
 echo   0. Exit
 echo  ========================================
 if not "%~1"=="" (set "opt=%~1" & set "arg1=%~2" & goto :run)
@@ -23,11 +23,11 @@ if "%opt%"=="" (echo No input, exiting. & exit /b 1)
 :run
 
 if "%opt%"=="1" python fill.py & goto :end
-if "%opt%"=="2" python fill.py --download-media & goto :end
-if "%opt%"=="3" python scrape.py & python fill.py --download-media & goto :end
-if "%opt%"=="4" goto :codes
-if "%opt%"=="5" python fill.py --refresh & goto :end
-if "%opt%"=="6" goto :login
+if "%opt%"=="2" python scrape.py & python fill.py & goto :end
+if "%opt%"=="3" goto :codes
+if "%opt%"=="4" python fill.py --refresh & goto :end
+if "%opt%"=="5" goto :login
+if "%opt%"=="6" python build_woocommerce.py & goto :end
 if "%opt%"=="0" exit /b 0
 echo Invalid option, try again.
 goto :menu
@@ -36,7 +36,7 @@ goto :menu
 if not "%arg1%"=="" (set codes=%arg1% & goto :runcodes)
 set /p codes="Enter codes (comma-separated): "
 :runcodes
-python fill.py --download-media --codes %codes%
+python fill.py --codes %codes%
 goto :end
 
 :login
