@@ -15,6 +15,10 @@ settings.json sections:
   output_columns   logical name -> template/WooCommerce header
   template         append_columns_if_missing
   values           attribute labels, category prefix, formats, regexes, ...
+  options          require_images: skip products that have no picture
+
+Only products with a name, a price and pictures end up in the output file
+(options.require_images = false keeps products without pictures).
 
 Usage:
   python build_woocommerce.py
@@ -65,6 +69,7 @@ MISSING_NAMES = frozenset()
 SRC_COLS = {}
 OPTIONAL_SRC_COLS = frozenset()
 OUT_COLS = {}
+OPTIONS = {}
 APPEND_COLUMNS = []
 VALUES = {}
 
@@ -102,7 +107,7 @@ def configure(cfg):
     global COLOR_MAP_FILE, COLOR_MAP_OPTS, IMAGES_DIR, IMAGE_URL_BASE
     global IMAGE_EXTS, IMAGE_STOPWORDS, MAIN_NAME_RE, COLOR_ALIASES, EXTRA_SLUGS
     global SALE_TAG, CODE_RE, MISSING_NAMES, SRC_COLS, OUT_COLS, APPEND_COLUMNS
-    global OPTIONAL_SRC_COLS, VALUES
+    global OPTIONAL_SRC_COLS, VALUES, OPTIONS
 
     files = cfg["files"]
     SRC = files["source"]
@@ -138,6 +143,7 @@ def configure(cfg):
     APPEND_COLUMNS = list(cfg["template"]["append_columns_if_missing"])
 
     VALUES = dict(cfg["values"])
+    OPTIONS = dict(cfg.get("options", {}))
     SALE_TAG = VALUES["sale_tag"]
     CODE_RE = re.compile(VALUES["code_pattern"])
     MISSING_NAMES = frozenset(VALUES["missing_names"])
@@ -500,7 +506,11 @@ def main(args):
             dimension = str(dimension)
 
         main_image, gallery_images = find_product_images(images_dir, code)
-        if main_image or gallery_images:
+        if not main_image and not gallery_images:
+            stats["no_images"] += 1
+            if OPTIONS.get("require_images", True):
+                continue
+        else:
             stats["products_with_images"] += 1
 
         def new_row():
@@ -608,6 +618,7 @@ def main(args):
     print(f"image url base: {image_base}")
     print(f"skipped: no_code={stats['no_code']} invalid={stats['invalid']} "
           f"no_name={stats['no_name']} no_price={stats['no_price']} "
+          f"no_images={stats['no_images']} "
           f"duplicate={stats['duplicate']} unknown_slug={stats['unknown_slug']}")
     if missing_colors:
         print(f"WARNING: colors missing from {color_map_path}: "

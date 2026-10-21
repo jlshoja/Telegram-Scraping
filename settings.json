@@ -74,6 +74,9 @@
     "image_titles": "image_titles",
     "image_alt": "image_alt"
   },
+  "options": {
+    "require_images": true
+  },
   "template": {
     "append_columns_if_missing": ["attribute:material", "attribute_name:material"]
   },
