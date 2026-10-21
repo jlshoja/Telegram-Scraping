@@ -1,42 +1,30 @@
-"""Build a WooCommerce import sheet from Product Database - filled.xlsx.
+"""Build a WooCommerce import sheet from the product database workbook.
 
-Format reference (template only, never modified):
-  woocommerce_import_new.xlsx
-  - parent row:  post_type=product, title/prices/categories/gallery + all attributes
-  - child rows:  post_type=product_variation, one per color, only color attribute
-  - if the template lacks the جنس pair, it is appended:
-        attribute:material / attribute_name:material (= "جنس")
-    every other column is kept exactly as the template (order included).
+Every fixed parameter (file paths, sheet names, source/output column headers,
+attribute labels, category prefix, title/SKU formats, image URL base, color
+aliases, ...) lives in settings.json. Edit that file instead of this code when
+something changes; this script only holds logic.
 
-Source columns are looked up BY HEADER NAME (immune to column moves):
-  کد محصول, نام محصول , اسامی محصولات, دسته بندی,
-  قیمت فروش, قیمت فروش تخفیف خورده, ابعاد, جنس, کاربرد, رنگ
-
-رنگ format per color:  <name> <stock>  joined by "|"
-  e.g. "آبی ۱ | قرمز ۲"  or  "مشکی۳ | قهوه‌ای۳"
-  - stock accepts Persian digits; missing number -> stock "ناموجود" + warning
-  - colors without a known English slug are SKIPPED + reported
-    (slugs are learned from the template file, then color_mapping.xlsx)
-
-Images:
-  Product Images/<product code>/<file>.webp
-  - files are used exactly as they are in the folder; the script never renames them
-  - a filename containing "main" (e.g. main-آبی.webp or code-main-blue.webp)
-    is the featured image (images column)
-  - every other file becomes a gallery image (gallery_images column)
-  - filenames may contain the Persian or English color; color_mapping.xlsx is
-    used to translate it and pick the first gallery image for each variation
-  - color_mapping.xlsx is re-read on every run, so new rows are picked up
-    automatically (missing colors are reported in the console).
+settings.json sections:
+  files            source/template/output/color-map paths and sheet names
+  color_map        color-map columns/sheet/start row
+  images           url_base, extensions, main-name regex, stopwords
+  colors           aliases (Persian->Persian) and extra_slugs (Persian->slug)
+  source_columns   logical name -> source workbook header
+  output_columns   logical name -> template/WooCommerce header
+  template         append_columns_if_missing
+  values           attribute labels, category prefix, formats, regexes, ...
 
 Usage:
   python build_woocommerce.py
+  python build_woocommerce.py --settings other.json
   python build_woocommerce.py --codes FA-1959,TR-402   # test subset
   python build_woocommerce.py --out woocommerce_import_new.xlsx
 """
 
 import argparse
 import collections
+import json
 import re
 import sys
 from pathlib import Path
@@ -52,35 +40,85 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-SRC = "Product Database - filled.xlsx"
-TEMPLATE = "woocommerce_import_new.xlsx"
-OUT = "woocommerce_import_new.xlsx"
-COLOR_MAP_FILE = "color_mapping.xlsx"
-IMAGES_DIR = "Product Images"
-IMAGE_URL_BASE = "https://luxbaz.com/wp-content/uploads/2026/10/"
-IMAGE_EXTS = {".webp", ".jpg", ".jpeg", ".png", ".gif", ".avif"}
-IMAGE_STOPWORDS = {
-    "the", "and", "with", "for", "light", "dark", "plain", "fabric", "stone",
-    "charcoal", "design", "pattern", "hot", "stamped", "small", "large",
-    "logo", "print", "shrink",
-}
-COLOR_ALIASES = {
-    "سورمه ای": "سرمه ای",
-    "سورمه": "سرمه ای",
-    "کرمی": "کرم",
-}
+DEFAULT_SETTINGS_FILE = "settings.json"
 
-# Extra / override Persian-color -> English-slug pairs.
-# Slugs are otherwise learned from the template file (first occurrence wins).
-# Add new colors here instead of inventing slugs inline, e.g. "فیروزه‌ای": "turquoise"
-EXTRA_SLUGS = {
-    "عسلی": "honey",  # template also uses "cream" once; "honey" is the newer pattern
-}
+# --- settings-driven state, populated by configure() -------------------------
+SRC = ""
+SOURCE_SHEET = None
+TEMPLATE = ""
+TEMPLATE_SHEET = None
+OUT = ""
+COLOR_MAP_FILE = ""
+COLOR_MAP_OPTS = {}
+IMAGES_DIR = ""
+IMAGE_URL_BASE = ""
+IMAGE_EXTS = frozenset()
+IMAGE_STOPWORDS = frozenset()
+MAIN_NAME_RE = re.compile(r"$^")
+COLOR_ALIASES = {}
+EXTRA_SLUGS = {}
+SALE_TAG = ""
+CODE_RE = re.compile(r"$^")
+MISSING_NAMES = frozenset()
+SRC_COLS = {}
+OPTIONAL_SRC_COLS = frozenset()
+OUT_COLS = {}
+APPEND_COLUMNS = []
+VALUES = {}
 
-SALE_TAG = "تخفیف خورده‌ها"  # exact template string (with ZWNJ)
 
-CODE_RE = re.compile(r"^([A-Z]+)-(\d+)$")
-MISSING_NAMES = {"", "ندارد", "نامشخص"}
+def load_settings(path):
+    p = Path(path)
+    if not p.exists():
+        raise SystemExit(f"settings file not found: {p}")
+    with p.open(encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def configure(cfg):
+    """Copy the settings file into module state (single source of truth)."""
+    global SRC, SOURCE_SHEET, TEMPLATE, TEMPLATE_SHEET, OUT
+    global COLOR_MAP_FILE, COLOR_MAP_OPTS, IMAGES_DIR, IMAGE_URL_BASE
+    global IMAGE_EXTS, IMAGE_STOPWORDS, MAIN_NAME_RE, COLOR_ALIASES, EXTRA_SLUGS
+    global SALE_TAG, CODE_RE, MISSING_NAMES, SRC_COLS, OUT_COLS, APPEND_COLUMNS
+    global OPTIONAL_SRC_COLS, VALUES
+
+    files = cfg["files"]
+    SRC = files["source"]
+    SOURCE_SHEET = files.get("source_sheet")
+    TEMPLATE = files["template"]
+    TEMPLATE_SHEET = files.get("template_sheet")
+    OUT = files["output"]
+    COLOR_MAP_FILE = files["color_map"]
+    IMAGES_DIR = files["images_dir"]
+
+    cm = cfg["color_map"]
+    COLOR_MAP_OPTS = {
+        "sheet": cm.get("sheet"),
+        "persian_col": cm.get("persian_column", 1),
+        "english_col": cm.get("english_column", 2),
+        "first_row": cm.get("first_data_row", 2),
+    }
+
+    images = cfg["images"]
+    IMAGE_URL_BASE = images["url_base"]
+    IMAGE_EXTS = frozenset(str(e).lower() for e in images["extensions"])
+    IMAGE_STOPWORDS = frozenset(str(w).lower() for w in images["stopwords"])
+    MAIN_NAME_RE = re.compile(images["main_name_pattern"], re.IGNORECASE)
+
+    colors = cfg["colors"]
+    COLOR_ALIASES = {color_key(k): v for k, v in colors["aliases"].items()}
+    EXTRA_SLUGS = dict(colors["extra_slugs"])
+
+    SRC_COLS = dict(cfg["source_columns"])
+    OPTIONAL_SRC_COLS = frozenset(cfg.get("optional_source_columns", []))
+    OUT_COLS = dict(cfg["output_columns"])
+    APPEND_COLUMNS = list(cfg["template"]["append_columns_if_missing"])
+
+    VALUES = dict(cfg["values"])
+    SALE_TAG = VALUES["sale_tag"]
+    CODE_RE = re.compile(VALUES["code_pattern"])
+    MISSING_NAMES = frozenset(VALUES["missing_names"])
 
 
 def col_index(header):
@@ -143,16 +181,22 @@ def parse_colors(value):
     return out
 
 
-def load_slug_map(template_rows, H):
+def load_slug_map(template_rows, tH, out_cols):
     """Persian color -> English slug, learned from template variation SKUs."""
     slugs = {}
+    type_i = tH.get(out_cols["post_type"])
+    color_i = tH.get(out_cols["attribute_color"])
+    sku_i = tH.get(out_cols["sku"])
+    parent_i = tH.get(out_cols["parent_sku"])
+    if None in (type_i, color_i, sku_i, parent_i):
+        return slugs
     for r in template_rows:
-        if r[H["post_type"]] != "product_variation":
+        if r[type_i] != VALUES["variation_type"]:
             continue
-        color = r[H["attribute:color"]]
+        color = r[color_i]
         if color in (None, ""):
             continue
-        sku, parent = str(r[H["sku"]]), str(r[H["parent_sku"]])
+        sku, parent = str(r[sku_i]), str(r[parent_i])
         prefix = parent + "-"
         if sku.startswith(prefix):
             slugs.setdefault(color_key(color), sku[len(prefix):])
@@ -160,19 +204,20 @@ def load_slug_map(template_rows, H):
     return slugs
 
 
-def load_color_map(path):
+def load_color_map(path, sheet=None, persian_col=1, english_col=2, first_row=2):
     """Load Persian -> English colors from color_mapping.xlsx (fresh each run)."""
     p = Path(path)
     if not p.exists():
         print(f"WARNING: color mapping file not found: {p}")
         return {}
     wb = openpyxl.load_workbook(p, read_only=True)
-    ws = wb.active
+    ws = wb[sheet] if sheet else wb.active
+    pc, ec = int(persian_col) - 1, int(english_col) - 1
     mapping = {}
-    for r in ws.iter_rows(min_row=2, values_only=True):
-        if not r or len(r) < 2:
+    for r in ws.iter_rows(min_row=int(first_row), values_only=True):
+        if not r or len(r) <= max(pc, ec):
             continue
-        fa, en = r[0], r[1]
+        fa, en = r[pc], r[ec]
         if fa in (None, "") or en in (None, ""):
             continue
         key = color_key(fa)
@@ -218,8 +263,7 @@ def natural_key(value):
 
 
 def is_main_filename(path):
-    stem = path.stem.lower()
-    return bool(re.match(r"^main([-_\s]|$)", stem) or "-main-" in stem)
+    return bool(MAIN_NAME_RE.search(path.stem))
 
 
 def detect_filename_color(mapping, stem):
@@ -303,34 +347,52 @@ def match_color_image(mapping, color, gallery, main=None):
 
 
 def main(args):
-    twb = openpyxl.load_workbook(args.template, read_only=True)
-    tws = twb.active
+    configure(load_settings(args.settings))
+
+    src_path = args.src or SRC
+    template_path = args.template or TEMPLATE
+    out_path = args.out or OUT
+    color_map_path = args.color_map or COLOR_MAP_FILE
+    images_dir = args.images_dir or IMAGES_DIR
+    image_base = args.image_base or IMAGE_URL_BASE
+
+    twb = openpyxl.load_workbook(template_path, read_only=True)
+    tws = twb[TEMPLATE_SHEET] if TEMPLATE_SHEET else twb.active
     tmpl_headers = [c.value for c in tws[1]]
     tH = {v: i for i, v in enumerate(tmpl_headers)}
     tmpl_rows = list(tws.iter_rows(min_row=2, values_only=True))
     twb.close()
-    slugs = load_slug_map(tmpl_rows, tH)
-    color_map = load_color_map(args.color_map)
+    slugs = load_slug_map(tmpl_rows, tH, OUT_COLS)
+    color_map = load_color_map(color_map_path, **COLOR_MAP_OPTS)
 
     out_headers = list(tmpl_headers)
-    for extra in ("attribute:material", "attribute_name:material"):
+    for extra in APPEND_COLUMNS:
         if extra not in out_headers:
             out_headers.append(extra)
-    oH = {v: i for i, v in enumerate(out_headers)}
+    index_of = {v: i for i, v in enumerate(out_headers)}
+    oH = {}
+    missing_out = []
+    for logical, header in OUT_COLS.items():
+        if header in index_of:
+            oH[logical] = index_of[header]
+        else:
+            missing_out.append(header)
+    if missing_out:
+        raise SystemExit("template missing columns: " + ", ".join(missing_out))
 
-    swb = openpyxl.load_workbook(args.src, read_only=True)
-    sws = swb.active
+    swb = openpyxl.load_workbook(src_path, read_only=True)
+    sws = swb[SOURCE_SHEET] if SOURCE_SHEET else swb.active
     src_headers = [c.value for c in sws[1]]
     H = col_index(src_headers)
     rows = list(sws.iter_rows(min_row=2, values_only=True))
     swb.close()
 
-    if "کد محصول" not in H:
-        raise SystemExit("missing column: کد محصول")
-    for name in ["نام محصول ", "اسامی محصولات", "قیمت فروش",
-                 "دسته بندی", "ابعاد", "جنس", "کاربرد", "رنگ"]:
-        if name not in H:
-            print(f"WARNING: column missing, treated as empty: {name}")
+    if SRC_COLS["code"] not in H:
+        raise SystemExit(f"missing column: {SRC_COLS['code']}")
+    for logical, header in SRC_COLS.items():
+        if logical != "code" and logical not in OPTIONAL_SRC_COLS \
+                and header not in H:
+            print(f"WARNING: column missing, treated as empty: {header}")
 
     wanted = None
     if args.codes:
@@ -343,7 +405,7 @@ def main(args):
     missing_colors = set()
 
     for excel_row, r in enumerate(rows, 2):
-        raw_code = cell(r, H, "کد محصول")
+        raw_code = cell(r, H, SRC_COLS["code"])
         if raw_code in (None, ""):
             stats["no_code"] += 1
             continue
@@ -359,35 +421,37 @@ def main(args):
             continue
         seen_codes.add(code)
 
-        name = cell(r, H, "نام محصول ")
+        name = cell(r, H, SRC_COLS["name"])
         if name in (None, "") or str(name).strip() in MISSING_NAMES:
-            name = cell(r, H, "اسامی محصولات")
+            name = cell(r, H, SRC_COLS["alt_name"])
         if name in (None, "") or str(name).strip() in MISSING_NAMES:
             warnings.append(f"row {excel_row}: {code} has no product name, skipped")
             stats["no_name"] += 1
             continue
-        title = f"{str(name).strip()} کد {code}"
+        title = VALUES["title_format"].format(name=str(name).strip(), code=code)
 
-        price = as_number(cell(r, H, "قیمت فروش"))
+        price = as_number(cell(r, H, SRC_COLS["price"]))
         if price is None:
             stats["no_price"] += 1
             continue
-        sale = as_number(cell(r, H, "قیمت فروش تخفیف خورده"))
+        sale = as_number(cell(r, H, SRC_COLS["sale_price"]))
         tag = SALE_TAG if sale is not None else None
 
-        cats = cell(r, H, "دسته بندی")
+        cats = cell(r, H, SRC_COLS["category"])
         if cats in (None, ""):
             categories = None
         else:
             parts = [p.strip() for p in str(cats).split("|") if p.strip()]
+            required_prefix = VALUES["category_required_prefix"]
             for p in parts:
-                if not p.startswith("کیف "):
+                if not p.startswith(required_prefix):
                     warnings.append(
                         f"row {excel_row}: {code} unusual category value: {p!r}")
-            categories = " | ".join(f"کیف زنانه>{p}" for p in parts) or None
+            categories = " | ".join(
+                f"{VALUES['category_parent']}>{p}" for p in parts) or None
 
         # --- attributes (only non-empty ones are written) ---
-        colors = parse_colors(cell(r, H, "رنگ"))
+        colors = parse_colors(cell(r, H, SRC_COLS["color"]))
         color_names, stocks = [], {}
         seen_colors = set()
         for cname, qty in colors:
@@ -400,20 +464,20 @@ def main(args):
             stocks[cname] = qty
             color_names.append(cname)
         if colors and not color_names:
-            warnings.append(f"row {excel_row}: {code} رنگ has no usable colors")
+            warnings.append(f"row {excel_row}: {code} has رنگ but no usable colors")
 
-        usage = cell(r, H, "کاربرد")
+        usage = cell(r, H, SRC_COLS["usage"])
         if usage in (None, ""):
             usage = None
         else:
             usage = "|".join(
                 p.strip() for p in str(usage).split("|") if p.strip()) or None
-        material = cell(r, H, "جنس")
-        dimension = cell(r, H, "ابعاد")
+        material = cell(r, H, SRC_COLS["material"])
+        dimension = cell(r, H, SRC_COLS["dimension"])
         if isinstance(dimension, (int, float)):
             dimension = str(dimension)
 
-        main_image, gallery_images = find_product_images(args.images_dir, code)
+        main_image, gallery_images = find_product_images(images_dir, code)
         if main_image or gallery_images:
             stats["products_with_images"] += 1
 
@@ -421,36 +485,38 @@ def main(args):
             return [None] * len(out_headers)
 
         parent = new_row()
-        parent[oH["post_type"]] = "product"
+        parent[oH["post_type"]] = VALUES["product_type"]
         parent[oH["post_title"]] = title
-        parent[oH["post_status"]] = "publish"
+        parent[oH["post_status"]] = VALUES["post_status"]
         parent[oH["sku"]] = code
         parent[oH["regular_price"]] = price
         if sale is not None:
             parent[oH["sale_price"]] = sale
             parent[oH["sale_tag"]] = tag
-        parent[oH["manage_stock"]] = "yes"
+        parent[oH["manage_stock"]] = VALUES["manage_stock"]
         if categories is not None:
             parent[oH["categories"]] = categories
         if color_names:
-            parent[oH["attribute:color"]] = "|".join(color_names)
-            parent[oH["attribute_name:color"]] = "رنگ"
+            parent[oH["attribute_color"]] = "|".join(color_names)
+            parent[oH["attribute_name_color"]] = VALUES["color_attribute_name"]
         if usage is not None:
-            parent[oH["attribute:application"]] = usage
-            parent[oH["attribute_name:application"]] = "کاربرد"
+            parent[oH["attribute_application"]] = usage
+            parent[oH["attribute_name_application"]] = \
+                VALUES["application_attribute_name"]
         if material is not None:
-            parent[oH["attribute:material"]] = material
-            parent[oH["attribute_name:material"]] = "جنس"
+            parent[oH["attribute_material"]] = material
+            parent[oH["attribute_name_material"]] = VALUES["material_attribute_name"]
         if dimension is not None:
-            parent[oH["attribute:dimention"]] = dimension
-            parent[oH["attribute_name:dimention"]] = "ابعاد"
+            parent[oH["attribute_dimention"]] = dimension
+            parent[oH["attribute_name_dimention"]] = \
+                VALUES["dimention_attribute_name"]
         if main_image:
-            parent[oH["images"]] = image_url(main_image, args.image_base)
+            parent[oH["images"]] = image_url(main_image, image_base)
             parent[oH["image_alt"]] = title
             stats["featured_images"] += 1
         if gallery_images:
             parent[oH["gallery_images"]] = "|".join(
-                image_url(p, args.image_base) for p in gallery_images)
+                image_url(p, image_base) for p in gallery_images)
         image_files = ([main_image] if main_image else []) + gallery_images
         if image_files:
             parent[oH["image_filename"]] = "|".join(p.name for p in image_files)
@@ -466,35 +532,38 @@ def main(args):
             if not slug:
                 warnings.append(
                     f"row {excel_row}: {code} unknown color {cname!r}, "
-                    f"variation skipped (add it to color_mapping.xlsx)")
+                    f"variation skipped (add it to {color_map_path})")
                 stats["unknown_slug"] += 1
                 continue
             qty = stocks[cname]
             if qty is None:
                 warnings.append(
                     f"row {excel_row}: {code} color {cname!r} has no stock number, "
-                    f"used 'ناموجود'")
-                qty = "ناموجود"
+                    f"used {VALUES['out_of_stock']!r}")
+                qty = VALUES["out_of_stock"]
             v = new_row()
-            v[oH["post_type"]] = "product_variation"
-            v[oH["post_status"]] = "publish"
-            v[oH["sku"]] = f"{code}-{slug}"
+            v[oH["post_type"]] = VALUES["variation_type"]
+            v[oH["post_status"]] = VALUES["post_status"]
+            v[oH["sku"]] = VALUES["variation_sku_format"].format(
+                code=code, slug=slug)
             v[oH["parent_sku"]] = code
             v[oH["regular_price"]] = price
             if sale is not None:
                 v[oH["sale_price"]] = sale
                 v[oH["sale_tag"]] = tag
-            v[oH["manage_stock"]] = "yes"
+            v[oH["manage_stock"]] = VALUES["manage_stock"]
             v[oH["stock_quantity"]] = qty
-            v[oH["attribute:color"]] = cname
-            v[oH["attribute_name:color"]] = "رنگ"
+            v[oH["attribute_color"]] = cname
+            v[oH["attribute_name_color"]] = VALUES["color_attribute_name"]
             var_image, color_matched = match_color_image(
                 color_map, cname, gallery_images, main_image)
             if var_image:
-                v[oH["images"]] = image_url(var_image, args.image_base)
+                v[oH["images"]] = image_url(var_image, image_base)
                 v[oH["image_filename"]] = var_image.name
-                v[oH["image_titles"]] = f"{title} - {cname}"
-                v[oH["image_alt"]] = f"{title} - {cname}"
+                var_title = VALUES["variation_image_title_format"].format(
+                    title=title, color=cname)
+                v[oH["image_titles"]] = var_title
+                v[oH["image_alt"]] = var_title
                 stats["variation_images_color" if color_matched
                       else "variation_images_fallback"] += 1
             out_rows.append(v)
@@ -502,13 +571,13 @@ def main(args):
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Sheet1"
+    ws.title = VALUES["sheet_name"]
     ws.append(out_headers)
     for row in out_rows:
         ws.append(row)
-    wb.save(args.out)
+    wb.save(out_path)
 
-    print(f"saved {args.out}: {stats['products']} products, "
+    print(f"saved {out_path}: {stats['products']} products, "
           f"{stats['variations']} variations")
     print(f"images: {stats['products_with_images']} products with folders, "
           f"{stats['featured_images']} featured; variations: "
@@ -518,23 +587,24 @@ def main(args):
           f"no_name={stats['no_name']} no_price={stats['no_price']} "
           f"duplicate={stats['duplicate']} unknown_slug={stats['unknown_slug']}")
     if missing_colors:
-        print("WARNING: colors missing from color_mapping.xlsx: "
+        print(f"WARNING: colors missing from {color_map_path}: "
               + ", ".join(sorted(missing_colors)))
     for w in warnings:
         print("WARNING:", w)
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--settings", default=DEFAULT_SETTINGS_FILE,
+                    help="JSON file holding every fixed parameter")
     ap.add_argument("--codes", default="",
                     help="only process these product codes, comma-separated (for testing)")
-    ap.add_argument("--src", default=SRC)
-    ap.add_argument("--template", default=TEMPLATE)
-    ap.add_argument("--out", default=OUT)
-    ap.add_argument("--color-map", default=COLOR_MAP_FILE,
-                    help="Persian->English color mapping workbook")
-    ap.add_argument("--images-dir", default=IMAGES_DIR,
-                    help="folder containing one subfolder per product code")
-    ap.add_argument("--image-base", default=IMAGE_URL_BASE,
-                    help="public URL prefix for image files")
+    ap.add_argument("--src", help="override settings.files.source")
+    ap.add_argument("--template", help="override settings.files.template")
+    ap.add_argument("--out", help="override settings.files.output")
+    ap.add_argument("--color-map", help="override settings.files.color_map")
+    ap.add_argument("--images-dir", help="override settings.files.images_dir")
+    ap.add_argument("--image-base", help="override settings.images.url_base")
     main(ap.parse_args())

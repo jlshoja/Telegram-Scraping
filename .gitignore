@@ -7,3 +7,17 @@ __pycache__/
 *.session-journal
 # legacy output, no longer generated (media download removed)
 media/
+
+# product images are never committed
+Product Images/
+*.webp
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.avif
+*.bmp
+*.tif
+*.tiff
+*.svg
+*.ico

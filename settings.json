@@ -1,0 +1,99 @@
+{
+  "files": {
+    "source": "Product Database - filled.xlsx",
+    "source_sheet": null,
+    "template": "woocommerce_import_new.xlsx",
+    "template_sheet": null,
+    "output": "woocommerce_import_new.xlsx",
+    "color_map": "color_mapping.xlsx",
+    "images_dir": "Product Images"
+  },
+  "color_map": {
+    "sheet": null,
+    "persian_column": 1,
+    "english_column": 2,
+    "first_data_row": 2
+  },
+  "images": {
+    "url_base": "https://luxbaz.com/wp-content/uploads/2026/10/",
+    "extensions": [".webp", ".jpg", ".jpeg", ".png", ".gif", ".avif"],
+    "main_name_pattern": "(^main([-_\\s]|$))|([-_\\s]main([-_\\s]|$))",
+    "stopwords": [
+      "the", "and", "with", "for", "light", "dark", "plain", "fabric",
+      "stone", "charcoal", "design", "pattern", "hot", "stamped", "small",
+      "large", "logo", "print", "shrink"
+    ]
+  },
+  "colors": {
+    "aliases": {
+      "سورمه ای": "سرمه ای",
+      "سورمه": "سرمه ای",
+      "کرمی": "کرم"
+    },
+    "extra_slugs": {
+      "عسلی": "honey"
+    }
+  },
+  "source_columns": {
+    "code": "کد محصول",
+    "name": "نام محصول ",
+    "alt_name": "اسامی محصولات",
+    "price": "قیمت فروش",
+    "sale_price": "قیمت فروش تخفیف خورده",
+    "category": "دسته بندی",
+    "dimension": "ابعاد",
+    "material": "جنس",
+    "usage": "کاربرد",
+    "color": "رنگ"
+  },
+  "optional_source_columns": ["sale_price"],
+  "output_columns": {
+    "post_type": "post_type",
+    "post_title": "post_title",
+    "post_status": "post_status",
+    "sku": "sku",
+    "parent_sku": "parent_sku",
+    "regular_price": "regular_price",
+    "sale_price": "sale_price",
+    "sale_tag": "sale_tag",
+    "manage_stock": "manage_stock",
+    "stock_quantity": "stock_quantity",
+    "categories": "categories",
+    "attribute_color": "attribute:color",
+    "attribute_name_color": "attribute_name:color",
+    "attribute_application": "attribute:application",
+    "attribute_name_application": "attribute_name:application",
+    "attribute_material": "attribute:material",
+    "attribute_name_material": "attribute_name:material",
+    "attribute_dimention": "attribute:dimention",
+    "attribute_name_dimention": "attribute_name:dimention",
+    "images": "images",
+    "gallery_images": "gallery_images",
+    "image_filename": "image_filename",
+    "image_titles": "image_titles",
+    "image_alt": "image_alt"
+  },
+  "template": {
+    "append_columns_if_missing": ["attribute:material", "attribute_name:material"]
+  },
+  "values": {
+    "product_type": "product",
+    "variation_type": "product_variation",
+    "post_status": "publish",
+    "manage_stock": "yes",
+    "sale_tag": "تخفیف خورده‌ها",
+    "out_of_stock": "ناموجود",
+    "sheet_name": "Sheet1",
+    "color_attribute_name": "رنگ",
+    "application_attribute_name": "کاربرد",
+    "material_attribute_name": "جنس",
+    "dimention_attribute_name": "ابعاد",
+    "category_parent": "کیف زنانه",
+    "category_required_prefix": "کیف ",
+    "title_format": "{name} کد {code}",
+    "variation_sku_format": "{code}-{slug}",
+    "variation_image_title_format": "{title} - {color}",
+    "code_pattern": "^([A-Z]+)-(\\d+)$",
+    "missing_names": ["", "ندارد", "نامشخص"]
+  }
+}
