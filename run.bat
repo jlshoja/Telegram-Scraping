@@ -13,6 +13,7 @@ echo   3. Fill specific codes (e.g. FA-1959,TR-402)
 echo   4. Refresh old values with fresh data
 echo   5. Telegram login (first time only)
 echo   6. Build WooCommerce import sheet
+echo   7. Edit settings (settings.json)
 echo   0. Exit
 echo  ========================================
 if not "%~1"=="" (set "opt=%~1" & set "arg1=%~2" & goto :run)
@@ -28,9 +29,14 @@ if "%opt%"=="3" goto :codes
 if "%opt%"=="4" python fill.py --refresh & goto :end
 if "%opt%"=="5" goto :login
 if "%opt%"=="6" python build_woocommerce.py & goto :end
+if "%opt%"=="7" goto :settings
 if "%opt%"=="0" exit /b 0
 echo Invalid option, try again.
 goto :menu
+
+:settings
+notepad "settings.json"
+goto :end
 
 :codes
 if not "%arg1%"=="" (set codes=%arg1% & goto :runcodes)
