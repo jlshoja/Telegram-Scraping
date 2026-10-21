@@ -21,3 +21,6 @@ Product Images/
 *.tiff
 *.svg
 *.ico
+
+# generated WooCommerce output (template is woocommerce_template.xlsx)
+woocommerce_import_new.xlsx
