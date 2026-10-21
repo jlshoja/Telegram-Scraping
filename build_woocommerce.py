@@ -8,7 +8,8 @@ something changes; this script only holds logic.
 settings.json sections:
   files            source/template/output/color-map paths and sheet names
   color_map        color-map columns/sheet/start row
-  images           url_base, extensions, main-name regex, stopwords
+  images           url_base ({year}/{month}/{day} = current date), extensions,
+                  main-name regex, stopwords
   colors           aliases (Persian->Persian) and extra_slugs (Persian->slug)
   source_columns   logical name -> source workbook header
   output_columns   logical name -> template/WooCommerce header
@@ -27,6 +28,7 @@ import collections
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 from urllib.parse import quote
 
@@ -75,6 +77,25 @@ def load_settings(path):
         return json.load(fh)
 
 
+def resolve_url_base(template, fixed_date=None):
+    """Fill {year}/{month}/{day} in an uploads URL prefix.
+
+    fixed_date: "YYYY-MM" or "YYYY-MM-DD" to pin the date, None = today.
+    """
+    if fixed_date:
+        parts = [int(p) for p in str(fixed_date).split("-") if p]
+        year = parts[0] if parts else date.today().year
+        month = parts[1] if len(parts) > 1 else 1
+        day = parts[2] if len(parts) > 2 else 1
+    else:
+        today = date.today()
+        year, month, day = today.year, today.month, today.day
+    return (str(template)
+            .replace("{year}", f"{year:04d}")
+            .replace("{month}", f"{month:02d}")
+            .replace("{day}", f"{day:02d}"))
+
+
 def configure(cfg):
     """Copy the settings file into module state (single source of truth)."""
     global SRC, SOURCE_SHEET, TEMPLATE, TEMPLATE_SHEET, OUT
@@ -101,7 +122,8 @@ def configure(cfg):
     }
 
     images = cfg["images"]
-    IMAGE_URL_BASE = images["url_base"]
+    IMAGE_URL_BASE = resolve_url_base(
+        images["url_base"], images.get("url_base_date"))
     IMAGE_EXTS = frozenset(str(e).lower() for e in images["extensions"])
     IMAGE_STOPWORDS = frozenset(str(w).lower() for w in images["stopwords"])
     MAIN_NAME_RE = re.compile(images["main_name_pattern"], re.IGNORECASE)
@@ -583,6 +605,7 @@ def main(args):
           f"{stats['featured_images']} featured; variations: "
           f"{stats['variation_images_color']} color-matched, "
           f"{stats['variation_images_fallback']} fallback")
+    print(f"image url base: {image_base}")
     print(f"skipped: no_code={stats['no_code']} invalid={stats['invalid']} "
           f"no_name={stats['no_name']} no_price={stats['no_price']} "
           f"duplicate={stats['duplicate']} unknown_slug={stats['unknown_slug']}")
