@@ -20,14 +20,12 @@ Source columns are looked up BY HEADER NAME (immune to column moves):
 
 Images:
   Product Images/<product code>/<file>.webp
-  - source names may contain the Persian or English color, e.g.
-      main-آبی.webp, 1-آبی.webp, 2-آبی.webp   or   main-blue.webp, blue01.webp
-  - files are renamed to the English convention:
-      <code>-main-<color>.webp   (featured image)
-      <code>-<color>01.webp      (gallery image 1, 2, ...)
-  - every non-main file becomes a gallery image (gallery_images column)
-  - a variation gets the first gallery image for its color; otherwise the first
-    gallery image is used.
+  - files are used exactly as they are in the folder; the script never renames them
+  - a filename containing "main" (e.g. main-آبی.webp or code-main-blue.webp)
+    is the featured image (images column)
+  - every other file becomes a gallery image (gallery_images column)
+  - filenames may contain the Persian or English color; color_mapping.xlsx is
+    used to translate it and pick the first gallery image for each variation
   - color_mapping.xlsx is re-read on every run, so new rows are picked up
     automatically (missing colors are reported in the console).
 
@@ -214,14 +212,6 @@ def slugify(value):
     return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 
-def image_file_slug(path):
-    return (slugify(path.stem) or "image") + path.suffix.lower()
-
-
-def image_url(path, base):
-    return base.rstrip("/") + "/" + quote(image_file_slug(path))
-
-
 def natural_key(value):
     parts = re.split(r"(\d+)", normalize(str(value)).lower())
     return [(0, int(p)) if p.isdigit() else (1, p) for p in parts]
@@ -256,8 +246,7 @@ def detect_filename_color(mapping, stem):
         if not value_slug or value_slug in seen_values:
             continue
         seen_values.add(value_slug)
-        match = re.search(
-            rf"(^|-){re.escape(value_slug)}(?=$|-|\d)", slug)
+        match = re.search(rf"(^|-){re.escape(value_slug)}(?=$|-|\d)", slug)
         if match:
             matches.append((match.start(), -len(value_slug), english))
 
@@ -266,93 +255,21 @@ def detect_filename_color(mapping, stem):
     return None
 
 
-def rename_product_images(files, code, mapping):
-    """Rename to <code>-main-<color> / <code>-<color>NN; return new paths/count."""
-    code_slug = slugify(code) or "product"
-    ordered = sorted(files, key=lambda p: natural_key(p.name))
-    entries = []
-    for path in ordered:
-        english = detect_filename_color(mapping, path.stem)
-        entries.append({
-            "path": path,
-            "color": slugify(english or ""),
-            "main": is_main_filename(path),
-            "no_color": english is None,
-        })
-
-    featured = next((e for e in entries if e["main"]), None)
-    source_paths = {p.resolve() for p in ordered}
-    counters = {}
-    taken = set()
-    targets = {}
-    for entry in entries:
-        path = entry["path"]
-        color = entry["color"]
-        if entry is featured:
-            stem = f"{code_slug}-main-{color}" if color else f"{code_slug}-main"
-        else:
-            group = color or "image"
-            counters[group] = counters.get(group, 0) + 1
-            stem = f"{code_slug}-{group}{counters[group]:02d}"
-        target = path.with_name(stem + path.suffix.lower())
-        candidate = target
-        n = 2
-        while candidate.name.lower() in taken or (
-                candidate.exists() and candidate.resolve() not in source_paths):
-            candidate = target.with_name(f"{target.stem}-{n}{target.suffix}")
-            n += 1
-        taken.add(candidate.name.lower())
-        targets[path] = candidate
-        if entry["no_color"]:
-            print(f"WARNING: no known color in image name: {path.name}")
-
-    final = {}
-    pending = []
-    for i, path in enumerate(ordered):
-        target = targets[path]
-        if path == target:
-            final[path] = path
-            continue
-        tmp = path.with_name(f".rename-tmp-{i}{path.suffix.lower()}")
-        n = 2
-        while tmp.exists():
-            tmp = path.with_name(f".rename-tmp-{i}-{n}{path.suffix.lower()}")
-            n += 1
-        try:
-            path.rename(tmp)
-            pending.append((tmp, target, path))
-        except OSError as exc:
-            print(f"WARNING: could not rename {path.name!r}: {exc}")
-            final[path] = path
-
-    renamed = 0
-    for tmp, target, original in pending:
-        try:
-            tmp.rename(target)
-            final[original] = target
-            renamed += 1
-        except OSError as exc:
-            print(f"WARNING: could not rename {tmp.name!r} -> {target.name!r}: {exc}")
-            try:
-                tmp.rename(original)
-            except OSError:
-                pass
-            final[original] = original
-    return [final[p] for p in ordered], renamed
+def image_url(path, base):
+    return base.rstrip("/") + "/" + quote(path.name)
 
 
-def find_product_images(images_dir, code, mapping):
+def find_product_images(images_dir, code):
     folder = Path(images_dir) / code
     if not folder.is_dir():
-        return None, [], 0
+        return None, []
     files = sorted(
         (p for p in folder.iterdir()
          if p.is_file() and p.suffix.lower() in IMAGE_EXTS),
         key=lambda p: natural_key(p.name),
     )
-    files, renamed = rename_product_images(files, code, mapping)
     main = next((p for p in files if is_main_filename(p)), None)
-    return main, [p for p in files if p != main], renamed
+    return main, [p for p in files if p != main]
 
 
 def image_keywords(mapping, color):
@@ -368,11 +285,11 @@ def image_keywords(mapping, color):
 
 def match_color_image(mapping, color, gallery, main=None):
     """Return (image, matched_by_color). First color-matching gallery image wins."""
-    slug = slugify(lookup_color(mapping, color) or "")
-    if slug:
-        pattern = re.compile(rf"(^|-){re.escape(slug)}(?=$|-|\d)")
+    wanted = slugify(lookup_color(mapping, color) or "")
+    if wanted:
         for path in gallery:
-            if pattern.search(path.stem.lower()):
+            found = detect_filename_color(mapping, path.stem)
+            if found and slugify(found) == wanted:
                 return path, True
 
     keywords = image_keywords(mapping, color)
@@ -496,9 +413,7 @@ def main(args):
         if isinstance(dimension, (int, float)):
             dimension = str(dimension)
 
-        main_image, gallery_images, renamed_images = find_product_images(
-            args.images_dir, code, color_map)
-        stats["renamed_images"] += renamed_images
+        main_image, gallery_images = find_product_images(args.images_dir, code)
         if main_image or gallery_images:
             stats["products_with_images"] += 1
 
@@ -538,8 +453,7 @@ def main(args):
                 image_url(p, args.image_base) for p in gallery_images)
         image_files = ([main_image] if main_image else []) + gallery_images
         if image_files:
-            parent[oH["image_filename"]] = "|".join(
-                image_file_slug(p) for p in image_files)
+            parent[oH["image_filename"]] = "|".join(p.name for p in image_files)
         out_rows.append(parent)
         stats["products"] += 1
 
@@ -578,7 +492,7 @@ def main(args):
                 color_map, cname, gallery_images, main_image)
             if var_image:
                 v[oH["images"]] = image_url(var_image, args.image_base)
-                v[oH["image_filename"]] = image_file_slug(var_image)
+                v[oH["image_filename"]] = var_image.name
                 v[oH["image_titles"]] = f"{title} - {cname}"
                 v[oH["image_alt"]] = f"{title} - {cname}"
                 stats["variation_images_color" if color_matched
@@ -597,8 +511,7 @@ def main(args):
     print(f"saved {args.out}: {stats['products']} products, "
           f"{stats['variations']} variations")
     print(f"images: {stats['products_with_images']} products with folders, "
-          f"{stats['featured_images']} featured, "
-          f"{stats['renamed_images']} files renamed; variations: "
+          f"{stats['featured_images']} featured; variations: "
           f"{stats['variation_images_color']} color-matched, "
           f"{stats['variation_images_fallback']} fallback")
     print(f"skipped: no_code={stats['no_code']} invalid={stats['invalid']} "
