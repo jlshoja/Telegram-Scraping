@@ -23,4 +23,4 @@ Product Images/
 *.ico
 
 # generated WooCommerce output (format lives in settings.json)
-woocommerce_import_output.xlsx
+woocommerce_import.xlsx

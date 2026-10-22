@@ -24,7 +24,7 @@ Usage:
   python build_woocommerce.py
   python build_woocommerce.py --settings other.json
   python build_woocommerce.py --codes FA-1959,TR-402   # test subset
-  python build_woocommerce.py --out woocommerce_import_output.xlsx
+  python build_woocommerce.py --out woocommerce_import.xlsx
 """
 
 import argparse
