@@ -15,7 +15,7 @@
    - `نوع بند` (strap type)
    - `کاربرد` (usage: `دوشی | روزمره | اداری | مجلسی | کوله | پاسپورتی`, or fallback `دسته بندی` value)
 3. **Match** each row in `Product Database.xlsx` (key = `کد محصول` like `FA-1959`, `TR-402`, `BA-1481`, `SHK-649`, `MR-5161`, `MK-100231`) to the best Telegram post containing that code.
-4. **Fill** `Product Database - filled.xlsx` (never touches the source file) + derive `دسته بندی` from `کاربرد` (`کیف دوشی زنانه` etc.).
+4. **Fill** `Product Database.xlsx` in place (single file, no `- filled` copy) + derive `دسته بندی` from `کاربرد` (`کیف دوشی زنانه` etc.).
 5. **Report** everything to `report.txt` (filled / not-found / ambiguous status).
 
 Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
@@ -40,8 +40,7 @@ Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
 | `.env` | Real credentials + proxy (NEVER commit, in `.gitignore`) | no |
 | `.gitignore` | Ignores `.env`, `cache/`, `*.session*`, `__pycache__/` | yes |
 | `Telegram channels.XLSX` | Input: single column `link`, 5 channel URLs (see §3) | yes |
-| `Product Database.xlsx` | Input source (ORIGINAL, never modified) — **currently missing from folder, only `- filled.xlsx` present** | yes (when present) |
-| `Product Database - filled.xlsx` | Output: 1419 rows, filled columns K–O (see §4) | yes |
+| `Product Database.xlsx` | The single product database: input source, filled in place by `fill.py` (columns K–O, see §4) | yes |
 | `cache/posts.json` | Cache: list of `{channel, id, date, text}` — incremental, dedup key `(channel, id)` | no (gitignored) |
 | `cache/tg.session` | Telethon persistent login — after first login no code needed | no |
 | `cache/pending_code.txt` | Login handshake file for `--wait-file` mode (create manually, script deletes after read) | no |
@@ -118,7 +117,7 @@ cache/posts.json  [{channel, id, date, text(normalized)}]
         │ fill.py: build_index() → exact{FA-1959}, nums{1959}
         │        + seller_affinity + best_candidate()
         ▼
-Product Database.xlsx ──► Product Database - filled.xlsx
+Product Database.xlsx (filled in place) ──► report.txt
                               ▼
                           report.txt
 ```
@@ -167,14 +166,14 @@ Functions:
   3. Seller affinity from `[(row,seller,num)]`.
   4. Per row: empty→`no_code`; bad format→`invalid`; `cands = exact[code] or nums[number]` else `not_found` (+3 hint posts containing digits); affinity for this seller → `best_candidate` (ties→`ambiguous`); empty fields→`found_empty`; else write FIELDS cells only if empty unless `--refresh` (else `kept_existing`), count `filled_rows`.
   5. Derive `دسته بندی` from `کاربرد` (skip if filled unless `--refresh`).
-  6. Save `DST`, write `REPORT` sections (see §8), print summary.
+  6. Save `SRC` in place, write `REPORT` sections (see §8), print summary.
 - CLI: `--refresh, --codes "FA-1,TR-2"`.
 
 Matching priority: exact code match beats bare-number match; `code_kw` (near `کد`) beats loose `PREFIX-NUM`; seller's usual channel wins; richer post wins. Bare-number fallback can mismatch — check `ambiguous` + hints in report.
 
 ### 5.4 `build_woocommerce.py` — WooCommerce import sheet
 
-Builds `woocommerce_import.xlsx` from `Product Database - filled.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name, a price and images are exported; the output file is never merged back anywhere.
+Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name, a price and images are exported; the output file is never merged back anywhere.
 
 - Source columns looked up **by header name**: `کد محصول`, `نام محصول `, `اسامی محصولات`, `دسته بندی`, `قیمت فروش`, `قیمت فروش تخفیف خورده`, `ابعاد`, `جنس`, `کاربرد`, `رنگ`.
 - Parent (`product`): title `{نام محصول} کد {کد}` (fallback `اسامی محصولات`; `ندارد`/empty → row skipped); sku = full code; `regular_price` ← `قیمت فروش` (missing → row skipped); `sale_price` + `sale_tag=تخفیف خورده‌ها` ← discount col (same value on parent + all variations); `manage_stock=yes`, parent stock empty; categories `کیف زنانه>{value}` joined ` | `; images all empty; attributes only when non-empty: color (`رنگ` names joined `|`), application (`کاربرد`), material (`جنس`), dimention (`ابعاد` raw).
@@ -188,7 +187,7 @@ Builds `woocommerce_import.xlsx` from `Product Database - filled.xlsx`. The colu
 ## 6. Outputs
 
 - `cache/posts.json`: `[{channel:str(title), id:int, date:str, text:str(normalized)}]`.
-- `Product Database - filled.xlsx`: source + filled cols 11–14 + col 6.
+- `Product Database.xlsx`: source + filled cols 11–14 + col 6.
 - `report.txt` sections: `posts / rows filled / rows without code`, `seller -> channel used`, `filled`, `دسته بندی derived`, `invalid code`, `code not found`, `found post but no field extracted`, `ambiguous candidates`, `existing values kept`.
 
 ---
@@ -231,7 +230,7 @@ Rerun safety: `scrape.py` appends only new posts; `fill.py` keeps existing cells
 - **Change category rule:** edit `usage_to_category()` in `fill.py`.
 - **Fresh rescan of one channel:** delete its posts from `cache/posts.json` or lower `--limit` for test.
 - **Debug match for one code:** `python fill.py --codes FA-1959` then read `report.txt` filled/ambiguous/not-found sections.
-- **Never:** commit `.env`, `cache/`, `*.session`; never write to `Product Database.xlsx` (only `- filled.xlsx`); keep Persian headers byte-identical.
+- **Never:** commit `.env`, `cache/`, `*.session`; keep Persian headers byte-identical.
 
 ---
 

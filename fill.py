@@ -16,7 +16,6 @@ for _stream in (sys.stdout, sys.stderr):
 
 POSTS_FILE = Path("cache/posts.json")
 SRC = "Product Database.xlsx"
-DST = "Product Database - filled.xlsx"
 REPORT = "report.txt"
 
 FIELDS = ["ابعاد", "جنس", "نوع بند", "کاربرد"]
@@ -174,8 +173,8 @@ def main(args):
         cat_cell.value = usage_to_category(usage)
         stats["category"].append((row, usage, cat_cell.value))
 
-    wb.save(DST)
-    print(f"saved {DST}")
+    wb.save(SRC)
+    print(f"saved {SRC}")
 
     lines = []
     lines.append(f"posts: {len(posts)}")

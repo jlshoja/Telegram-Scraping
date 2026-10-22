@@ -44,7 +44,7 @@ python fill.py
 
 - Reads the cached posts (`cache/posts.json`)
 - Extracts **ابعاد**, **جنس**, **نوع بند**, **کاربرد** from each post
-- Writes the values into `Product Database - filled.xlsx` (the original `Product Database.xlsx` stays untouched)
+- Writes the values directly into `Product Database.xlsx` (single file, filled in place)
 - Produces `report.txt` with statistics and any problems (missing codes, empty posts, etc.)
 
 > **Result:** 25 of the 46 coded rows are filled; the remaining 21 either have no matching post or the post only contains price info.
@@ -100,14 +100,13 @@ python fill.py --refresh   # refresh text fields
 | File | Purpose |
 |------|---------|
 | `scrape.py` | Authenticates via Telethon, reads the 5 channels, caches all posts to `cache/posts.json` |
-| `fill.py` | Extracts **ابعاد / جنس / نوع بند / کاربرد**, writes `Product Database - filled.xlsx` |
+| `fill.py` | Extracts **ابعاد / جنس / نوع بند / کاربرد**, writes `Product Database.xlsx` |
 | `build_woocommerce.py` | Builds `woocommerce_import.xlsx` from the filled database; all settings (incl. the output column layout) live in `settings.json` |
 | `woocommerce_import.xlsx` | **Generated output** to upload to WooCommerce |
 | `tgcommon.py` | Shared helpers: normalize Persian digits, extract codes, extract the four fields |
 | `cache/posts.json` | 1634 raw posts (downloaded once, reused every run) |
 | `Telegram channels.XLSX` | The 5 channel URLs (add/remove as needed) |
-| `Product Database.xlsx` | Original data – **never modified** |
-| `Product Database - filled.xlsx` | Filled output (25 rows populated) |
+| `Product Database.xlsx` | The single database: source data, filled in place by fill.py (25 rows populated) |
 | `report.txt` | Summary of filled / missing / empty rows |
 
 ---
