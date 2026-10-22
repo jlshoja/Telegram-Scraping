@@ -2,9 +2,9 @@
   "files": {
     "source": "Product Database - filled.xlsx",
     "source_sheet": null,
-    "template": "woocommerce_template.xlsx",
+    "template": "woocommerce_import_new.xlsx",
     "template_sheet": null,
-    "output": "woocommerce_import_new.xlsx",
+    "output": "woocommerce_import_output.xlsx",
     "color_map": "color_mapping.xlsx",
     "images_dir": "Product Images"
   },

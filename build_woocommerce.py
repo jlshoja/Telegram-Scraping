@@ -24,7 +24,7 @@ Usage:
   python build_woocommerce.py
   python build_woocommerce.py --settings other.json
   python build_woocommerce.py --codes FA-1959,TR-402   # test subset
-  python build_woocommerce.py --out woocommerce_import_new.xlsx
+  python build_woocommerce.py --out woocommerce_import_output.xlsx
 """
 
 import argparse
@@ -47,6 +47,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 DEFAULT_SETTINGS_FILE = "settings.json"
+BASE_DIR = Path(__file__).resolve().parent
 
 # --- settings-driven state, populated by configure() -------------------------
 SRC = ""
@@ -374,14 +375,20 @@ def match_color_image(mapping, color, gallery, main=None):
     return main, False
 
 
-def main(args):
-    configure(load_settings(args.settings))
+def project_path(value):
+    """Resolve a path: absolute stays as is, relative to the script folder."""
+    p = Path(value)
+    return p if p.is_absolute() else (BASE_DIR / p)
 
-    src_path = args.src or SRC
-    template_path = args.template or TEMPLATE
-    out_path = args.out or OUT
-    color_map_path = args.color_map or COLOR_MAP_FILE
-    images_dir = args.images_dir or IMAGES_DIR
+
+def main(args):
+    configure(load_settings(project_path(args.settings)))
+
+    src_path = project_path(args.src or SRC)
+    template_path = project_path(args.template or TEMPLATE)
+    out_path = project_path(args.out or OUT)
+    color_map_path = project_path(args.color_map or COLOR_MAP_FILE)
+    images_dir = project_path(args.images_dir or IMAGES_DIR)
     image_base = args.image_base or IMAGE_URL_BASE
 
     twb = openpyxl.load_workbook(template_path, read_only=True)

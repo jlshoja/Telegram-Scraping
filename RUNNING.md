@@ -101,7 +101,9 @@ python fill.py --refresh   # refresh text fields
 |------|---------|
 | `scrape.py` | Authenticates via Telethon, reads the 5 channels, caches all posts to `cache/posts.json` |
 | `fill.py` | Extracts **ابعاد / جنس / نوع بند / کاربرد**, writes `Product Database - filled.xlsx` |
-| `build_woocommerce.py` | Builds `woocommerce_import_new.xlsx` from the filled database (format mirrors `woocommerce_import.xlsx` + new `attribute:material` pair for `جنس`) |
+| `build_woocommerce.py` | Builds `woocommerce_import_output.xlsx` from the filled database, using `woocommerce_import_new.xlsx` as the read-only input template (paths/settings in `settings.json`) |
+| `woocommerce_import_new.xlsx` | **Input template** (1515 rows, 39 columns) — never modified |
+| `woocommerce_import_output.xlsx` | **Generated output** to upload to WooCommerce |
 | `tgcommon.py` | Shared helpers: normalize Persian digits, extract codes, extract the four fields |
 | `cache/posts.json` | 1634 raw posts (downloaded once, reused every run) |
 | `Telegram channels.XLSX` | The 5 channel URLs (add/remove as needed) |
