@@ -22,5 +22,5 @@ Product Images/
 *.svg
 *.ico
 
-# generated WooCommerce output (input template is woocommerce_import_new.xlsx)
+# generated WooCommerce output (format lives in settings.json)
 woocommerce_import_output.xlsx

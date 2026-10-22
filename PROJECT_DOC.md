@@ -29,8 +29,8 @@ Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
 | `scrape.py` | Step 1: auth + channel scan → `cache/posts.json` | yes |
 | `tgcommon.py` | Shared: `normalize`, `extract_fields`, `extract_codes` + all regexes | yes |
 | `fill.py` | Step 2: match posts → fill Excel + `report.txt` | yes |
-| `build_woocommerce.py` | Step 3: build `woocommerce_import_output.xlsx` from filled DB, using `woocommerce_import_new.xlsx` as the input template (all paths in `settings.json`) | yes |
-| `settings.json` | All fixed parameters: file paths, sheets, column headers, formats, image URL base, color aliases | yes |
+| `build_woocommerce.py` | Step 3: build `woocommerce_import_output.xlsx` from the filled DB; all fixed parameters (incl. the 39-column output header row) live in `settings.json` | yes |
+| `settings.json` | All fixed parameters: file paths, sheets, column headers, output header row, formats, image URL base, color aliases | yes |
 | `color_mapping.xlsx` | Persian → English color map (re-read every run) | yes |
 | `Product Images/<code>/` | Product pictures (never committed) | no (gitignored) |
 | `run.bat` | Windows menu: 7 options (fill / rescan / specific codes / refresh / login / build / edit settings) | yes |
@@ -47,7 +47,6 @@ Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
 | `cache/pending_code.txt` | Login handshake file for `--wait-file` mode (create manually, script deletes after read) | no |
 | `report.txt` | Output log from last `fill.py` run (see §8) | yes (snapshot) |
 | `scrape.log` | Stdout log of last scrape | yes (snapshot) |
-| `woocommerce_import_new.xlsx` | **Input template** for the WooCommerce sheet (1515 rows, 39 columns, never modified by scripts) | yes |
 | `woocommerce_import_output.xlsx` | **Generated output** to upload to WooCommerce (regenerated every build) | no (gitignored) |
 | `fill.py --codes` / `scrape.py --limit` | Test / limit flags | — |
 
@@ -175,7 +174,7 @@ Matching priority: exact code match beats bare-number match; `code_kw` (near `ک
 
 ### 5.4 `build_woocommerce.py` — WooCommerce import sheet
 
-Builds `woocommerce_import_output.xlsx` from `Product Database - filled.xlsx`, using `woocommerce_import_new.xlsx` as the input template (39 headers in identical order, material columns included). Only products with a name, a price and images are exported; output is never merged back into the template.
+Builds `woocommerce_import_output.xlsx` from `Product Database - filled.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name, a price and images are exported; the output file is never merged back anywhere.
 
 - Source columns looked up **by header name**: `کد محصول`, `نام محصول `, `اسامی محصولات`, `دسته بندی`, `قیمت فروش`, `قیمت فروش تخفیف خورده`, `ابعاد`, `جنس`, `کاربرد`, `رنگ`.
 - Parent (`product`): title `{نام محصول} کد {کد}` (fallback `اسامی محصولات`; `ندارد`/empty → row skipped); sku = full code; `regular_price` ← `قیمت فروش` (missing → row skipped); `sale_price` + `sale_tag=تخفیف خورده‌ها` ← discount col (same value on parent + all variations); `manage_stock=yes`, parent stock empty; categories `کیف زنانه>{value}` joined ` | `; images all empty; attributes only when non-empty: color (`رنگ` names joined `|`), application (`کاربرد`), material (`جنس`), dimention (`ابعاد` raw).
@@ -220,7 +219,7 @@ Rerun safety: `scrape.py` appends only new posts; `fill.py` keeps existing cells
 6. `existing values kept` with `I2*1.3`-style values → placeholder formulas from earlier manual edit; use `--refresh` to overwrite.
 7. `scrape.log` Persian garbled → stdout was cp1252; scripts now force UTF-8 (`reconfigure`). Use `chcp 65001` / UTF-8 editor.
 8. Private channel needs invite link in `Telegram channels.XLSX`; expired invite → `SKIP cannot access`.
-9. `woocommerce_import_new.xlsx` is the input template; the build writes to `woocommerce_import_output.xlsx` — never import `..._new.xlsx` after replacing it.
+9. No import template file is needed: the 39-column layout lives in `settings.json` → `output_headers`, and variation SKUs come from `color_mapping.xlsx`.
 
 ---
 

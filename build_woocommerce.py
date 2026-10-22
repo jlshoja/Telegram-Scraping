@@ -1,19 +1,19 @@
 """Build a WooCommerce import sheet from the product database workbook.
 
 Every fixed parameter (file paths, sheet names, source/output column headers,
-attribute labels, category prefix, title/SKU formats, image URL base, color
-aliases, ...) lives in settings.json. Edit that file instead of this code when
-something changes; this script only holds logic.
+the full output header row, attribute labels, category prefix, title/SKU
+formats, image URL base, color aliases, ...) lives in settings.json. Edit that
+file instead of this code when something changes; this script only holds logic.
 
 settings.json sections:
-  files            source/template/output/color-map paths and sheet names
+  files            source/output/color-map paths and sheet names
   color_map        color-map columns/sheet/start row
   images           url_base ({year}/{month}/{day} = current date), extensions,
                   main-name regex, stopwords
   colors           aliases (Persian->Persian) and extra_slugs (Persian->slug)
   source_columns   logical name -> source workbook header
-  output_columns   logical name -> template/WooCommerce header
-  template         append_columns_if_missing
+  output_columns   logical name -> WooCommerce header
+  output_headers   the exact ordered WooCommerce header row (39 columns)
   values           attribute labels, category prefix, formats, regexes, ...
   options          require_images: skip products that have no picture
 
@@ -52,8 +52,6 @@ BASE_DIR = Path(__file__).resolve().parent
 # --- settings-driven state, populated by configure() -------------------------
 SRC = ""
 SOURCE_SHEET = None
-TEMPLATE = ""
-TEMPLATE_SHEET = None
 OUT = ""
 COLOR_MAP_FILE = ""
 COLOR_MAP_OPTS = {}
@@ -70,8 +68,8 @@ MISSING_NAMES = frozenset()
 SRC_COLS = {}
 OPTIONAL_SRC_COLS = frozenset()
 OUT_COLS = {}
+OUT_HEADERS = []
 OPTIONS = {}
-APPEND_COLUMNS = []
 VALUES = {}
 
 
@@ -104,17 +102,15 @@ def resolve_url_base(template, fixed_date=None):
 
 def configure(cfg):
     """Copy the settings file into module state (single source of truth)."""
-    global SRC, SOURCE_SHEET, TEMPLATE, TEMPLATE_SHEET, OUT
+    global SRC, SOURCE_SHEET, OUT
     global COLOR_MAP_FILE, COLOR_MAP_OPTS, IMAGES_DIR, IMAGE_URL_BASE
     global IMAGE_EXTS, IMAGE_STOPWORDS, MAIN_NAME_RE, COLOR_ALIASES, EXTRA_SLUGS
-    global SALE_TAG, CODE_RE, MISSING_NAMES, SRC_COLS, OUT_COLS, APPEND_COLUMNS
+    global SALE_TAG, CODE_RE, MISSING_NAMES, SRC_COLS, OUT_COLS, OUT_HEADERS
     global OPTIONAL_SRC_COLS, VALUES, OPTIONS
 
     files = cfg["files"]
     SRC = files["source"]
     SOURCE_SHEET = files.get("source_sheet")
-    TEMPLATE = files["template"]
-    TEMPLATE_SHEET = files.get("template_sheet")
     OUT = files["output"]
     COLOR_MAP_FILE = files["color_map"]
     IMAGES_DIR = files["images_dir"]
@@ -141,7 +137,7 @@ def configure(cfg):
     SRC_COLS = dict(cfg["source_columns"])
     OPTIONAL_SRC_COLS = frozenset(cfg.get("optional_source_columns", []))
     OUT_COLS = dict(cfg["output_columns"])
-    APPEND_COLUMNS = list(cfg["template"]["append_columns_if_missing"])
+    OUT_HEADERS = list(cfg["output_headers"])
 
     VALUES = dict(cfg["values"])
     OPTIONS = dict(cfg.get("options", {}))
@@ -208,29 +204,6 @@ def parse_colors(value):
                 continue
         out.append((part, None))
     return out
-
-
-def load_slug_map(template_rows, tH, out_cols):
-    """Persian color -> English slug, learned from template variation SKUs."""
-    slugs = {}
-    type_i = tH.get(out_cols["post_type"])
-    color_i = tH.get(out_cols["attribute_color"])
-    sku_i = tH.get(out_cols["sku"])
-    parent_i = tH.get(out_cols["parent_sku"])
-    if None in (type_i, color_i, sku_i, parent_i):
-        return slugs
-    for r in template_rows:
-        if r[type_i] != VALUES["variation_type"]:
-            continue
-        color = r[color_i]
-        if color in (None, ""):
-            continue
-        sku, parent = str(r[sku_i]), str(r[parent_i])
-        prefix = parent + "-"
-        if sku.startswith(prefix):
-            slugs.setdefault(color_key(color), sku[len(prefix):])
-    slugs.update({color_key(k): v for k, v in EXTRA_SLUGS.items()})
-    return slugs
 
 
 def load_color_map(path, sheet=None, persian_col=1, english_col=2, first_row=2):
@@ -385,35 +358,23 @@ def main(args):
     configure(load_settings(project_path(args.settings)))
 
     src_path = project_path(args.src or SRC)
-    template_path = project_path(args.template or TEMPLATE)
     out_path = project_path(args.out or OUT)
     color_map_path = project_path(args.color_map or COLOR_MAP_FILE)
     images_dir = project_path(args.images_dir or IMAGES_DIR)
     image_base = args.image_base or IMAGE_URL_BASE
 
-    twb = openpyxl.load_workbook(template_path, read_only=True)
-    tws = twb[TEMPLATE_SHEET] if TEMPLATE_SHEET else twb.active
-    tmpl_headers = [c.value for c in tws[1]]
-    tH = {v: i for i, v in enumerate(tmpl_headers)}
-    tmpl_rows = list(tws.iter_rows(min_row=2, values_only=True))
-    twb.close()
-    slugs = load_slug_map(tmpl_rows, tH, OUT_COLS)
     color_map = load_color_map(color_map_path, **COLOR_MAP_OPTS)
+    slugs = {color_key(k): slugify(v)
+             for k, v in EXTRA_SLUGS.items() if v}
 
-    out_headers = list(tmpl_headers)
-    for extra in APPEND_COLUMNS:
-        if extra not in out_headers:
-            out_headers.append(extra)
+    out_headers = list(OUT_HEADERS)
     index_of = {v: i for i, v in enumerate(out_headers)}
     oH = {}
-    missing_out = []
     for logical, header in OUT_COLS.items():
-        if header in index_of:
-            oH[logical] = index_of[header]
-        else:
-            missing_out.append(header)
-    if missing_out:
-        raise SystemExit("template missing columns: " + ", ".join(missing_out))
+        if header not in index_of:
+            raise SystemExit(
+                f"output_headers in settings is missing: {header}")
+        oH[logical] = index_of[header]
 
     swb = openpyxl.load_workbook(src_path, read_only=True)
     sws = swb[SOURCE_SHEET] if SOURCE_SHEET else swb.active
@@ -643,7 +604,6 @@ if __name__ == "__main__":
     ap.add_argument("--codes", default="",
                     help="only process these product codes, comma-separated (for testing)")
     ap.add_argument("--src", help="override settings.files.source")
-    ap.add_argument("--template", help="override settings.files.template")
     ap.add_argument("--out", help="override settings.files.output")
     ap.add_argument("--color-map", help="override settings.files.color_map")
     ap.add_argument("--images-dir", help="override settings.files.images_dir")
