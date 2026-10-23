@@ -56,21 +56,28 @@ def project_path(value):
 
 def convert_to_webp(src, dst, max_kb=MAX_WEBP_SIZE_KB):
     """Convert an image to WebP under max_kb. Returns (ok, size_kb)."""
-    img = Image.open(src)
+    img = Image.open(src).convert("RGB")
     tmp = dst.with_suffix(".tmp.webp")
-    quality = 80
-    for _ in range(6):
-        img.convert("RGB").save(tmp, "WEBP", quality=quality, method=6)
+    quality, scale = 80, 1.0
+    for _ in range(14):
+        cur = img
+        if scale < 1.0:
+            cur = img.resize(
+                (max(1, int(img.width * scale)),
+                 max(1, int(img.height * scale))),
+                Image.LANCZOS)
+        cur.save(tmp, "WEBP", quality=quality, method=6)
         size_kb = tmp.stat().st_size / 1024
         if size_kb <= max_kb:
             tmp.replace(dst)
             return True, size_kb
-        quality -= 12
-    w, h = img.size
-    img.resize((w * 3 // 4, h * 3 // 4), Image.LANCZOS) \
-        .save(dst, "WEBP", quality=60, method=6)
-    tmp.unlink(missing_ok=True)
-    return False, dst.stat().st_size / 1024
+        if quality > 32:
+            quality -= 12
+        else:
+            scale *= 0.8
+            quality = 80
+    tmp.replace(dst)
+    return False, size_kb
 
 
 def last_scrape_dates(posts):
