@@ -162,9 +162,15 @@ async def ensure_auth(client, args):
         for _ in range(600):
             await asyncio.sleep(1)
             if pending.exists():
-                code = pending.read_text(encoding="utf-8").strip()
-                pending.unlink()
-                break
+                text = pending.read_text(
+                    encoding="utf-8", errors="replace").strip()
+                digits = re.sub(r"\D", "", text)
+                if digits:
+                    code = digits
+                    pending.unlink()
+                    break
+                print("pending_code.txt has no code in it, still waiting",
+                      flush=True)
         if not code:
             print("TIMEOUT waiting for code")
             sys.exit(2)
@@ -178,6 +184,9 @@ async def ensure_auth(client, args):
             print("2FA_PASSWORD_NEEDED")
             sys.exit(3)
         await client.sign_in(password=pw)
+    except errors.PhoneCodeInvalidError:
+        print("CODE_INVALID - code expired or wrong; run option 5 again")
+        sys.exit(2)
     print("LOGIN_OK")
 
 
