@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -9,6 +10,8 @@ from urllib.parse import urlparse
 import openpyxl
 from dotenv import load_dotenv
 from telethon import TelegramClient, errors, functions, types
+
+from tgcommon import normalize
 
 from tgcommon import normalize
 
@@ -27,6 +30,29 @@ CHANNELS_FILE = "Telegram channels.XLSX"
 CACHE_DIR = Path("cache")
 POSTS_FILE = CACHE_DIR / "posts.json"
 SESSION = CACHE_DIR / "tg"
+
+
+def normalize_phone(raw):
+    """Make a phone number usable by Telethon (full international +country).
+
+    Accepts +989143463191, 989143463191, 00989143463191, 09143463191,
+    9143463191, and also strips spaces, dashes, dots and parentheses.
+    """
+    text = normalize(str(raw or "")).strip()
+    digits = re.sub(r"\D", "", text)
+    if not digits:
+        return ""
+    if text.startswith("+"):
+        return text
+    if text.startswith("00"):
+        return "+" + digits[2:]
+    if len(digits) == 12 and digits.startswith("98"):
+        return "+" + digits
+    if len(digits) == 11 and digits.startswith("09"):
+        return "+98" + digits[1:]
+    if len(digits) == 10 and digits.startswith("9"):
+        return "+98" + digits
+    return "+" + digits
 
 
 def parse_proxy(url):
@@ -94,6 +120,7 @@ async def ensure_auth(client, args):
     phone = args.phone or os.environ.get("TG_PHONE") or ""
     if not phone:
         phone = input("Phone number (+98...): ").strip()
+    phone = normalize_phone(phone)
 
     if args.code:
         try:
