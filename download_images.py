@@ -135,6 +135,7 @@ async def download_all(jobs, images_dir, max_kb):
         entities[title] = ent
         print(f"channel ok: {title}")
     tmpdir = Path(tempfile.mkdtemp(prefix="tgimg_", dir=str(images_dir)))
+    momentum = {"timeouts": 0, "ok": 0}
     try:
         total = len(jobs)
         for ji, (code, channel, msg_id) in enumerate(jobs, 1):
@@ -159,16 +160,37 @@ async def download_all(jobs, images_dir, max_kb):
                 try:
                     got = await asyncio.wait_for(
                         client.download_media(m, file=str(tmp)), 180)
+                except asyncio.CancelledError:
+                    print("\ninterrupted by Ctrl+C, exiting", flush=True)
+                    raise
                 except errors.FloodWaitError as exc:
+                    momentum["timeouts"] = 0
                     await asyncio.sleep(min(exc.seconds + 1, 60))
-                    got = await asyncio.wait_for(
-                        client.download_media(m, file=str(tmp)), 180)
+                    try:
+                        got = await asyncio.wait_for(
+                            client.download_media(m, file=str(tmp)), 180)
+                    except asyncio.CancelledError:
+                        print("\ninterrupted by Ctrl+C, exiting", flush=True)
+                        raise
+                    except (asyncio.TimeoutError, Exception) as exc:
+                        notes.append(f"msg {m.id} retry failed: {exc}")
+                        continue
                 except asyncio.TimeoutError:
+                    momentum["timeouts"] += 1
                     notes.append(f"msg {m.id} download timed out")
+                    if momentum["timeouts"] >= 3 and momentum["ok"] == 0:
+                        print(
+                            "3 downloads timed out with nothing saved "
+                            "- stopping. Check VPN/proxy and run again",
+                            flush=True,
+                        )
+                        raise SystemExit(3)
                     continue
                 except Exception as exc:
                     notes.append(f"msg {m.id} download failed: {exc}")
                     continue
+                momentum["timeouts"] = 0
+                momentum["ok"] += 1
                 tmp = Path(got)
                 try:
                     ok, size_kb = convert_to_webp(tmp, dst, max_kb)
