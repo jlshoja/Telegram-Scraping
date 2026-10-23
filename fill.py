@@ -19,13 +19,6 @@ SRC = "Product Database.xlsx"
 REPORT = "report.txt"
 
 FIELDS = ["ابعاد", "جنس", "نوع بند", "کاربرد"]
-COL = {  # 1-based excel columns
-    "ابعاد": 11,
-    "جنس": 12,
-    "نوع بند": 13,
-    "کاربرد": 14,
-    "دسته بندی": 6,
-}
 
 
 def usage_to_category(usage):
@@ -153,7 +146,7 @@ def main(args):
         for name in FIELDS:
             if name not in fields:
                 continue
-            cell = ws.cell(row, COL[name])
+            cell = ws.cell(row, header[name])
             if cell.value not in (None, "") and not args.refresh:
                 stats["kept_existing"].append((row, code, name, cell.value))
                 continue
@@ -164,10 +157,10 @@ def main(args):
             stats["filled"].append((row, code, post["channel"], post["id"], written))
 
     for row in range(2, ws.max_row + 1):
-        cat_cell = ws.cell(row, COL["دسته بندی"])
+        cat_cell = ws.cell(row, header["دسته بندی"])
         if cat_cell.value not in (None, "") and not args.refresh:
             continue
-        usage = ws.cell(row, COL["کاربرد"]).value
+        usage = ws.cell(row, header["کاربرد"]).value
         if usage in (None, ""):
             continue
         cat_cell.value = usage_to_category(usage)
