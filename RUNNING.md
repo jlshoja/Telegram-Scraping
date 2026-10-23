@@ -102,6 +102,7 @@ python fill.py --refresh   # refresh text fields
 | `scrape.py` | Authenticates via Telethon, reads the 5 channels, caches all posts to `cache/posts.json` |
 | `fill.py` | Extracts **ابعاد / جنس / نوع بند / کاربرد**, writes `Product Database.xlsx` |
 | `build_woocommerce.py` | Builds `woocommerce_import.xlsx` from the filled database; all settings (incl. the output column layout) live in `settings.json` |
+| `download_images.py` | Matches DB codes to Telegram posts (FA-1863 / 1863) and downloads their photos into `Product Images/<CODE>/` (first photo = `-main.webp`) |
 | `woocommerce_import.xlsx` | **Generated output** to upload to WooCommerce |
 | `tgcommon.py` | Shared helpers: normalize Persian digits, extract codes, extract the four fields |
 | `cache/posts.json` | 1634 raw posts (downloaded once, reused every run) |

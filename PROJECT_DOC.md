@@ -30,10 +30,11 @@ Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
 | `tgcommon.py` | Shared: `normalize`, `extract_fields`, `extract_codes` + all regexes | yes |
 | `fill.py` | Step 2: match posts → fill Excel + `report.txt` | yes |
 | `build_woocommerce.py` | Step 3: build `woocommerce_import.xlsx` from the filled DB; all fixed parameters (incl. the 39-column output header row) live in `settings.json` | yes |
+| `download_images.py` | Step 4: match DB codes (FA-1863 / 1863) to posts, download photos → `Product Images/<CODE>/` (photo 1 = `-main.webp`, rest `-02.…`; WebP ≤ `images.max_webp_kb`; videos skipped; skip folders that already have images unless `--refresh`) | yes |
 | `settings.json` | All fixed parameters: file paths, sheets, column headers, output header row, formats, image URL base, color aliases | yes |
 | `color_mapping.xlsx` | Persian → English color map (re-read every run) | yes |
 | `Product Images/<code>/` | Product pictures (never committed) | no (gitignored) |
-| `run.bat` | Windows menu: 7 options (fill / rescan / specific codes / refresh / login / build / edit settings) | yes |
+| `run.bat` | Windows menu: 8 options (fill / rescan / specific codes / refresh / login / build / edit settings / download images) | yes |
 | `RUNNING.md` | Original human run-guide (Persian-friendly, quickstart) | yes |
 | `requirements.txt` | `telethon>=1.40`, `python-dotenv>=1.0`, `openpyxl>=3.1` | yes |
 | `.env.example` | Template: `TELEGRAM_API_ID, TELEGRAM_API_HASH, TG_PHONE, TG_PASSWORD, TG_PROXY` | yes |

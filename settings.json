@@ -17,6 +17,7 @@
     "url_base_date": null,
     "extensions": [".webp", ".jpg", ".jpeg", ".png", ".gif", ".avif"],
     "main_name_pattern": "(^main([-_\\s]|$))|([-_\\s]main([-_\\s]|$))",
+    "max_webp_kb": 100,
     "stopwords": [
       "the", "and", "with", "for", "light", "dark", "plain", "fabric",
       "stone", "charcoal", "design", "pattern", "hot", "stamped", "small",
@@ -35,6 +36,7 @@
   },
   "source_columns": {
     "code": "کد محصول",
+    "seller": "فروشنده",
     "name": "نام محصول ",
     "alt_name": "اسامی محصولات",
     "price": "قیمت فروش",
