@@ -116,6 +116,7 @@ async def resolve(client, kind, value):
 
 async def ensure_auth(client, args):
     if await client.is_user_authorized():
+        print("already logged in, no code needed")
         return
     phone = args.phone or os.environ.get("TG_PHONE") or ""
     if not phone:
