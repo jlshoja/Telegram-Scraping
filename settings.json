@@ -45,7 +45,8 @@
     "dimension": "ابعاد",
     "material": "جنس",
     "usage": "کاربرد",
-    "color": "رنگ"
+    "color": "رنگ",
+    "strap": "نوع بند"
   },
   "optional_source_columns": ["sale_price"],
   "output_columns": {
@@ -68,6 +69,8 @@
     "attribute_name_material": "attribute_name:material",
     "attribute_dimention": "attribute:dimention",
     "attribute_name_dimention": "attribute_name:dimention",
+    "attribute_strap": "attribute:strap",
+    "attribute_name_strap": "attribute_name:strap",
     "images": "images",
     "gallery_images": "gallery_images",
     "image_filename": "image_filename",
@@ -103,8 +106,8 @@
     "attribute_name:closure-style",
     "attribute:lining-material",
     "attribute_name:lining-material",
-    "attribute:long-strap",
-    "attribute_name:long-strap",
+    "attribute:strap",
+    "attribute_name:strap",
     "attribute:number-of-inside-pockets",
     "attribute_name:number-of-inside-pockets",
     "attribute:number-of-outside-pockets",
@@ -130,6 +133,7 @@
     "application_attribute_name": "کاربرد",
     "material_attribute_name": "جنس",
     "dimention_attribute_name": "ابعاد",
+    "strap_attribute_name": "بند",
     "category_parent": "کیف زنانه",
     "category_required_prefix": "کیف ",
     "title_format": "{name} کد {code}",

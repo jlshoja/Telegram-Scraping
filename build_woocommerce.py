@@ -475,6 +475,7 @@ def main(args):
         dimension = cell(r, H, SRC_COLS["dimension"])
         if isinstance(dimension, (int, float)):
             dimension = str(dimension)
+        strap = cell(r, H, SRC_COLS.get("strap"))
 
         main_image, gallery_images = find_product_images(images_dir, code)
         if not main_image and not gallery_images:
@@ -513,6 +514,9 @@ def main(args):
             parent[oH["attribute_dimention"]] = dimension
             parent[oH["attribute_name_dimention"]] = \
                 VALUES["dimention_attribute_name"]
+        if strap is not None:
+            parent[oH["attribute_strap"]] = strap
+            parent[oH["attribute_name_strap"]] = VALUES["strap_attribute_name"]
         if main_image:
             parent[oH["images"]] = image_url(main_image, image_base)
             parent[oH["image_alt"]] = title
@@ -558,6 +562,9 @@ def main(args):
             v[oH["stock_quantity"]] = qty
             v[oH["attribute_color"]] = cname
             v[oH["attribute_name_color"]] = VALUES["color_attribute_name"]
+            if strap is not None:
+                v[oH["attribute_strap"]] = strap
+                v[oH["attribute_name_strap"]] = VALUES["strap_attribute_name"]
             var_image, color_matched = match_color_image(
                 color_map, cname, gallery_images, main_image)
             if var_image:
