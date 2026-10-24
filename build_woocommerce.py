@@ -315,6 +315,9 @@ def find_product_images(images_dir, code):
         key=lambda p: natural_key(p.name),
     )
     main = next((p for p in files if is_main_filename(p)), None)
+    if main is None and files:
+        main = files[0]
+        files = files[1:]
     return main, [p for p in files if p != main]
 
 

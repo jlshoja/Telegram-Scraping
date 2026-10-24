@@ -14,9 +14,12 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-POSTS_FILE = Path("cache/posts.json")
-SRC = "Product Database.xlsx"
-REPORT = "report.txt"
+BASE_DIR = Path(__file__).resolve().parent
+POSTS_FILE = BASE_DIR / "cache/posts.json"
+SETTINGS = BASE_DIR / "settings.json"
+SRC = BASE_DIR / json.loads(SETTINGS.read_text(encoding="utf-8")) \
+    ["files"]["source"]
+REPORT = BASE_DIR / "report.txt"
 
 FIELDS = ["ابعاد", "جنس", "نوع بند", "کاربرد"]
 

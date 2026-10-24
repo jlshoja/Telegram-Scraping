@@ -1,10 +1,10 @@
 {
   "files": {
-    "source": "Product Database.xlsx",
+    "source": "../Common Data/Product Database.xlsx",
     "source_sheet": null,
     "output": "woocommerce_import.xlsx",
-    "color_map": "color_mapping.xlsx",
-    "images_dir": "Product Images"
+    "color_map": "../Common Data/color_mapping.xlsx",
+    "images_dir": "../Image Processing/final image renamed"
   },
   "color_map": {
     "sheet": null,
