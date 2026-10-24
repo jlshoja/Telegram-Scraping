@@ -562,9 +562,6 @@ def main(args):
             v[oH["stock_quantity"]] = qty
             v[oH["attribute_color"]] = cname
             v[oH["attribute_name_color"]] = VALUES["color_attribute_name"]
-            if strap is not None:
-                v[oH["attribute_strap"]] = strap
-                v[oH["attribute_name_strap"]] = VALUES["strap_attribute_name"]
             var_image, color_matched = match_color_image(
                 color_map, cname, gallery_images, main_image)
             if var_image:
