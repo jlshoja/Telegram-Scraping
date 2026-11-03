@@ -7,6 +7,7 @@ from pathlib import Path
 import openpyxl
 
 from tgcommon import extract_codes, extract_fields, normalize
+from categories import load_standard_categories, standardize_category
 
 for _stream in (sys.stdout, sys.stderr):
     try:
@@ -24,57 +25,6 @@ CATEGORY_ALIASES = _SETTINGS.get("category_aliases", {})
 REPORT = BASE_DIR / "report.txt"
 
 FIELDS = ["ابعاد", "جنس", "نوع بند", "کاربرد"]
-
-CATEGORY_SEP = re.compile(r"[|\-–—،,]")
-
-
-def strip_affixes(s):
-    """کیف دوشی زنانه -> دوشی"""
-    s = str(s).strip()
-    if s.startswith("کیف "):
-        s = s[4:].strip()
-    elif s == "کیف":
-        s = ""
-    for suf in (" زنانه", "زنانه"):
-        if s.endswith(suf):
-            s = s[:-len(suf)].strip()
-            break
-    return re.sub(r"\s+", " ", s).strip()
-
-
-def load_standard_categories(path):
-    """Read standard_categories.xlsx -> {keyword: standard_subcategory}."""
-    wb = openpyxl.load_workbook(path, data_only=True)
-    ws = wb.worksheets[0]
-    mapping = {}
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        sub = row[1] if len(row) > 1 else None
-        if sub is None or str(sub).strip() in ("", "—", "-"):
-            continue
-        sub = str(sub).strip()
-        kw = strip_affixes(sub)
-        if kw:
-            mapping[kw] = sub
-    return mapping
-
-
-def standardize_category(raw, keyword_map, aliases):
-    """کیف دستی | کیف دوشی -> کیف دستی زنانه | کیف دوشی زنانه"""
-    parts = [p.strip() for p in CATEGORY_SEP.split(str(raw)) if p.strip()]
-    matched, unmatched = [], []
-    for p in parts:
-        kw = strip_affixes(p)
-        kw = aliases.get(kw, kw)
-        if kw in keyword_map:
-            matched.append(keyword_map[kw])
-        else:
-            unmatched.append(p)
-    seen, out = set(), []
-    for m in matched:
-        if m not in seen:
-            seen.add(m)
-            out.append(m)
-    return (" | ".join(out) if out else None), unmatched
 
 
 def standardize_column(ws, header, std_map):

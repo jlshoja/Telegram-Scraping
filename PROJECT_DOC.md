@@ -161,7 +161,7 @@ Functions:
 - `build_seller_affinity(code_rows, nums)` — `{(seller, channel): weight}`; weight 3 if `code_kw` else 1. Captures "seller X's codes mostly appear in channel Y".
 - `score(mtype, fields)` = `60 (code_kw) | 40 (full) + 2*len(fields)`.
 - `best_candidate(cands, affinity)` — sort by `(affinity[channel], score, len(fields), len(text))` desc; returns `(top, tie_count>1?flag)`.
-- `strip_affixes(s)` → keyword; `load_standard_categories(path)` → `{keyword: standard_subcategory}`; `standardize_category(raw, map, aliases)` → `(joined | None, unmatched)` — see §4.
+- Shared module `categories.py`: `strip_affixes(s)` → keyword; `load_standard_categories(path)` → `{keyword: standard_subcategory}`; `standardize_category(raw, map, aliases)` → `(joined | None, unmatched)` — see §4. Used by both `fill.py` and `build_woocommerce.py`.
 - `main(args)` flow:
   1. Load posts, build index. Load workbook, resolve header names→columns.
   2. Parse rows: `code=normalize(str).upper()`, `m=re.match(^([A-Z]+)-(\d+)$)`. `--codes FA-1,TR-2` filters.
@@ -175,14 +175,14 @@ Matching priority: exact code match beats bare-number match; `code_kw` (near `ک
 
 ### 5.4 `build_woocommerce.py` — WooCommerce import sheet
 
-Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name and a price are exported; pictures are required by default (`options.require_images`) but `--allow-no-images` exports products with empty image columns too. The output file is never merged back anywhere.
+Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name and a price are exported; pictures are required by default (`options.require_images`) but `--allow-no-images` exports products with empty image columns too. `دسته بندی` is standardized on the fly with `standard_categories.xlsx` + `category_aliases` — the same rules as `fill.py --categories-only` — so the sheet is correct even when that step was forgotten (disable with `--no-fix-categories`). The output file is never merged back anywhere.
 
 - Source columns looked up **by header name**: `کد محصول`, `نام محصول `, `اسامی محصولات`, `دسته بندی`, `قیمت فروش اصلی`, `قیمت تخفیف خورده`, `ابعاد`, `جنس`, `نوع بند`, `کاربرد`, `رنگ`.
 - Parent (`product`): title `{نام محصول} کد {کد}` (fallback `اسامی محصولات`; `ندارد`/empty → row skipped); sku = full code; `regular_price` ← `قیمت فروش اصلی` (missing → row skipped); `sale_price` + `sale_tag=تخفیف خورده‌ها` ← `قیمت تخفیف خورده` only when that value is **lower** than the regular price (a higher/equal or zero value is logged as a warning and the row is exported without a discount; same value on parent + all variations); `manage_stock=yes`, parent stock empty; categories `کیف زنانه>{value}` joined ` | `; images all empty; attributes only when non-empty: color (`رنگ` names joined `|`), application (`کاربرد`), material (`جنس`), dimention (`ابعاد` raw), strap (`نوع بند` raw, `attribute:strap` / `attribute_name:strap` = `بند`, parent only).
 - Variations (`product_variation`, one per color): sku `{code}-{english-slug}`, same prices/tag, stock from `رنگ` pair (`آبی-2 | سبز-3`; Persian digits ok; missing number → `ناموجود` + warning), only color attribute (no strap).
 - Slugs: learned at runtime from the template file's variation rows, then `settings.json` (`colors.extra_slugs`, e.g. `عسلی→honey`); unknown colors skip that variation + warn (add slug to `settings`).
-- Row selection: valid `PREFIX-NUMBER` codes only; duplicates skipped. Products without images are skipped unless `options.require_images` is false or `--allow-no-images` is passed (the sheet is then built with the image columns left empty; variations are still exported). CLI: `--settings`, `--codes`, `--src`, `--template`, `--out`, `--color-map`, `--images-dir`, `--image-base`, `--allow-no-images`.
-- `run.bat` option 5 runs it (images required); option 7 runs it with `--allow-no-images`.
+- Row selection: valid `PREFIX-NUMBER` codes only; duplicates skipped. Products without images are skipped unless `options.require_images` is false or `--allow-no-images` is passed (the sheet is then built with the image columns left empty; variations are still exported). CLI: `--settings`, `--codes`, `--src`, `--template`, `--out`, `--color-map`, `--images-dir`, `--image-base`, `--allow-no-images`, `--no-fix-categories`.
+- `run.bat` option 5 runs it (images required); option 7 runs it with `--allow-no-images`. Both standardize `دسته بندی` automatically, so option 3 is only needed to persist the fix into `Product Database.xlsx`.
 
 ---
 

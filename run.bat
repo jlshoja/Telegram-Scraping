@@ -9,7 +9,7 @@ echo   Telegram Scraping - Runner
 echo  ========================================
 echo   1. Fill Excel (cached posts)
 echo   2. Rescan channels, then fill
-echo   3. Fix categories (standardize category)
+echo   3. Fix categories in database (build fixes output)
 echo   4. Telegram login (first time only)
 echo   5. Build WooCommerce import sheet
 echo   6. Download product images

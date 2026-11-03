@@ -17,6 +17,10 @@ settings.json sections:
   values           attribute labels, category prefix, formats, regexes, ...
   options          require_images: skip products that have no picture
 
+Categories are always standardized on the fly with files.standard_categories +
+category_aliases (identical rules to `fill.py --categories-only`), so the sheet
+is correct even when that step was forgotten; --no-fix-categories disables it.
+
 Only products with a name and a price end up in the output file. Products
 without pictures are additionally required by default (options.require_images);
 pass --allow-no-images to export them too, leaving the image columns empty.
@@ -27,6 +31,7 @@ Usage:
   python build_woocommerce.py --codes FA-1959,TR-402   # test subset
   python build_woocommerce.py --out woocommerce_import.xlsx
   python build_woocommerce.py --allow-no-images        # ignore missing pictures
+  python build_woocommerce.py --no-fix-categories      # keep دسته بندی as-is
 """
 
 import argparse
@@ -41,6 +46,7 @@ from urllib.parse import quote
 import openpyxl
 
 from tgcommon import normalize
+from categories import load_standard_categories, standardize_category
 
 for _stream in (sys.stdout, sys.stderr):
     try:
@@ -67,6 +73,8 @@ EXTRA_SLUGS = {}
 SALE_TAG = ""
 CODE_RE = re.compile(r"$^")
 MISSING_NAMES = frozenset()
+STD_CATS_FILE = ""
+CATEGORY_ALIASES = {}
 SRC_COLS = {}
 OPTIONAL_SRC_COLS = frozenset()
 OUT_COLS = {}
@@ -108,7 +116,7 @@ def configure(cfg):
     global COLOR_MAP_FILE, COLOR_MAP_OPTS, IMAGES_DIR, IMAGE_URL_BASE
     global IMAGE_EXTS, IMAGE_STOPWORDS, MAIN_NAME_RE, COLOR_ALIASES, EXTRA_SLUGS
     global SALE_TAG, CODE_RE, MISSING_NAMES, SRC_COLS, OUT_COLS, OUT_HEADERS
-    global OPTIONAL_SRC_COLS, VALUES, OPTIONS
+    global OPTIONAL_SRC_COLS, VALUES, OPTIONS, STD_CATS_FILE, CATEGORY_ALIASES
 
     files = cfg["files"]
     SRC = files["source"]
@@ -116,6 +124,8 @@ def configure(cfg):
     OUT = files["output"]
     COLOR_MAP_FILE = files["color_map"]
     IMAGES_DIR = files["images_dir"]
+    STD_CATS_FILE = files.get("standard_categories") or ""
+    CATEGORY_ALIASES = dict(cfg.get("category_aliases", {}))
 
     cm = cfg["color_map"]
     COLOR_MAP_OPTS = {
@@ -376,6 +386,18 @@ def main(args):
     slugs = {color_key(k): slugify(v)
              for k, v in EXTRA_SLUGS.items() if v}
 
+    # Categories are always standardized here (same rules as fill.py option 3)
+    # so the import sheet is correct even if that step was forgotten.
+    std_map = {}
+    if not args.no_fix_categories:
+        std_path = project_path(STD_CATS_FILE) if STD_CATS_FILE else None
+        if std_path is not None and std_path.exists():
+            std_map = load_standard_categories(std_path)
+        else:
+            print(f"WARNING: standard categories not loaded "
+                  f"({std_path or 'files.standard_categories missing'}); "
+                  f"دسته بندی values used as-is")
+
     out_headers = list(OUT_HEADERS)
     index_of = {v: i for i, v in enumerate(out_headers)}
     oH = {}
@@ -454,17 +476,32 @@ def main(args):
         tag = SALE_TAG if sale is not None else None
 
         cats = cell(r, H, SRC_COLS["category"])
-        if cats in (None, ""):
-            categories = None
-        else:
-            parts = [p.strip() for p in str(cats).split("|") if p.strip()]
-            required_prefix = VALUES["category_required_prefix"]
-            for p in parts:
-                if not p.startswith(required_prefix):
+        categories = None
+        if cats not in (None, ""):
+            if std_map:
+                cats, unmatched = standardize_category(
+                    cats, std_map, CATEGORY_ALIASES)
+                if unmatched:
                     warnings.append(
-                        f"row {excel_row}: {code} unusual category value: {p!r}")
-            categories = " | ".join(
-                f"{VALUES['category_parent']}>{p}" for p in parts) or None
+                        f"row {excel_row}: {code} category not in "
+                        f"standard_categories: {', '.join(unmatched)}")
+                    stats["category_unmatched"] += 1
+                if cats is None:
+                    warnings.append(
+                        f"row {excel_row}: {code} category cleared, "
+                        f"no standard match")
+                    stats["category_cleared"] += 1
+                else:
+                    stats["category_fixed"] += 1
+            if cats:
+                parts = [p.strip() for p in str(cats).split("|") if p.strip()]
+                required_prefix = VALUES["category_required_prefix"]
+                for p in parts:
+                    if not p.startswith(required_prefix):
+                        warnings.append(
+                            f"row {excel_row}: {code} unusual category value: {p!r}")
+                categories = " | ".join(
+                    f"{VALUES['category_parent']}>{p}" for p in parts) or None
 
         # --- attributes (only non-empty ones are written) ---
         colors = parse_colors(cell(r, H, SRC_COLS["color"]))
@@ -618,6 +655,10 @@ def main(args):
               f"{stats['variation_images_fallback']} fallback")
         print("mode: --allow-no-images (image columns left empty when missing)")
     print(f"image url base: {image_base}")
+    if std_map:
+        print(f"categories: {stats['category_fixed']} standardized against "
+              f"{std_path.name}, {stats['category_cleared']} cleared, "
+              f"{stats['category_unmatched']} with unmatched parts")
     print(f"skipped: no_code={stats['no_code']} invalid={stats['invalid']} "
           f"no_name={stats['no_name']} no_price={stats['no_price']} "
           f"no_images={stats['no_images']} "
@@ -650,4 +691,9 @@ if __name__ == "__main__":
                     help="export products even when no picture is downloaded "
                          "(image columns stay empty); same as "
                          "options.require_images = false")
+    ap.add_argument("--no-fix-categories", action="store_true",
+                    help="use دسته بندی values as-is; by default they are "
+                         "standardized with files.standard_categories + "
+                         "category_aliases (same rules as fill.py "
+                         "--categories-only)")
     main(ap.parse_args())
