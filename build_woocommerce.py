@@ -392,8 +392,11 @@ def main(args):
     rows = list(sws.iter_rows(min_row=2, values_only=True))
     swb.close()
 
-    if SRC_COLS["code"] not in H:
-        raise SystemExit(f"missing column: {SRC_COLS['code']}")
+    for required in ("code", "price"):
+        if SRC_COLS[required] not in H:
+            raise SystemExit(
+                f"missing column: {SRC_COLS[required]} "
+                f"(settings.json source_columns.{required})")
     for logical, header in SRC_COLS.items():
         if logical != "code" and logical not in OPTIONAL_SRC_COLS \
                 and header not in H:
@@ -440,6 +443,14 @@ def main(args):
             stats["no_price"] += 1
             continue
         sale = as_number(cell(r, H, SRC_COLS["sale_price"]))
+        if sale is not None and (sale <= 0 or sale >= price):
+            warnings.append(
+                f"row {excel_row}: {code} discount price {sale!r} is not below "
+                f"regular price {price!r}, sale price ignored")
+            stats["bad_discount"] += 1
+            sale = None
+        if sale is not None:
+            stats["discounted"] += 1
         tag = SALE_TAG if sale is not None else None
 
         cats = cell(r, H, SRC_COLS["category"])
@@ -592,7 +603,8 @@ def main(args):
     wb.save(out_path)
 
     print(f"saved {out_path}: {stats['products']} products, "
-          f"{stats['variations']} variations")
+          f"{stats['variations']} variations "
+          f"({stats['discounted']} with a discount price)")
     if require_images:
         print(f"images: {stats['products_with_images']} products with folders, "
               f"{stats['featured_images']} featured; variations: "

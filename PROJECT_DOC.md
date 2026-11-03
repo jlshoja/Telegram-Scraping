@@ -177,8 +177,8 @@ Matching priority: exact code match beats bare-number match; `code_kw` (near `ک
 
 Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name and a price are exported; pictures are required by default (`options.require_images`) but `--allow-no-images` exports products with empty image columns too. The output file is never merged back anywhere.
 
-- Source columns looked up **by header name**: `کد محصول`, `نام محصول `, `اسامی محصولات`, `دسته بندی`, `قیمت فروش`, `قیمت فروش تخفیف خورده`, `ابعاد`, `جنس`, `نوع بند`, `کاربرد`, `رنگ`.
-- Parent (`product`): title `{نام محصول} کد {کد}` (fallback `اسامی محصولات`; `ندارد`/empty → row skipped); sku = full code; `regular_price` ← `قیمت فروش` (missing → row skipped); `sale_price` + `sale_tag=تخفیف خورده‌ها` ← discount col (same value on parent + all variations); `manage_stock=yes`, parent stock empty; categories `کیف زنانه>{value}` joined ` | `; images all empty; attributes only when non-empty: color (`رنگ` names joined `|`), application (`کاربرد`), material (`جنس`), dimention (`ابعاد` raw), strap (`نوع بند` raw, `attribute:strap` / `attribute_name:strap` = `بند`, parent only).
+- Source columns looked up **by header name**: `کد محصول`, `نام محصول `, `اسامی محصولات`, `دسته بندی`, `قیمت فروش اصلی`, `قیمت تخفیف خورده`, `ابعاد`, `جنس`, `نوع بند`, `کاربرد`, `رنگ`.
+- Parent (`product`): title `{نام محصول} کد {کد}` (fallback `اسامی محصولات`; `ندارد`/empty → row skipped); sku = full code; `regular_price` ← `قیمت فروش اصلی` (missing → row skipped); `sale_price` + `sale_tag=تخفیف خورده‌ها` ← `قیمت تخفیف خورده` only when that value is **lower** than the regular price (a higher/equal or zero value is logged as a warning and the row is exported without a discount; same value on parent + all variations); `manage_stock=yes`, parent stock empty; categories `کیف زنانه>{value}` joined ` | `; images all empty; attributes only when non-empty: color (`رنگ` names joined `|`), application (`کاربرد`), material (`جنس`), dimention (`ابعاد` raw), strap (`نوع بند` raw, `attribute:strap` / `attribute_name:strap` = `بند`, parent only).
 - Variations (`product_variation`, one per color): sku `{code}-{english-slug}`, same prices/tag, stock from `رنگ` pair (`آبی-2 | سبز-3`; Persian digits ok; missing number → `ناموجود` + warning), only color attribute (no strap).
 - Slugs: learned at runtime from the template file's variation rows, then `settings.json` (`colors.extra_slugs`, e.g. `عسلی→honey`); unknown colors skip that variation + warn (add slug to `settings`).
 - Row selection: valid `PREFIX-NUMBER` codes only; duplicates skipped. Products without images are skipped unless `options.require_images` is false or `--allow-no-images` is passed (the sheet is then built with the image columns left empty; variations are still exported). CLI: `--settings`, `--codes`, `--src`, `--template`, `--out`, `--color-map`, `--images-dir`, `--image-base`, `--allow-no-images`.
@@ -189,7 +189,7 @@ Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout
 ## 6. Outputs
 
 - `cache/posts.json`: `[{channel:str(title), id:int, date:str, text:str(normalized)}]`.
-- `Product Database.xlsx`: source + filled cols 11–14 + standardized col 6.
+- `Product Database.xlsx`: source + filled cols 12–15 (`ابعاد`, `جنس`, `نوع بند`, `کاربرد`) + standardized col 6.
 - `report.txt` sections: `posts / rows filled / rows without code`, `seller -> channel used`, `filled`, `دسته بندی standardized`, `دسته بندی cleared`, `invalid code`, `code not found`, `found post but no field extracted`, `ambiguous candidates`, `existing values kept`.
 
 ---
