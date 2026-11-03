@@ -9,15 +9,13 @@ echo   Telegram Scraping - Runner
 echo  ========================================
 echo   1. Fill Excel (cached posts)
 echo   2. Rescan channels, then fill
-echo   3. Fill specific codes (e.g. FA-1959,TR-402)
-echo   4. Refresh old values with fresh data
-echo   5. Telegram login (first time only)
-echo   6. Build WooCommerce import sheet
-echo   7. Edit settings (settings.json)
-echo   8. Download product images
+echo   3. Fix categories (standardize category)
+echo   4. Telegram login (first time only)
+echo   5. Build WooCommerce import sheet
+echo   6. Download product images
 echo   0. Exit
 echo  ========================================
-if not "%~1"=="" (set "opt=%~1" & set "arg1=%~2" & goto :run)
+if not "%~1"=="" (set "opt=%~1" & goto :run)
 set /p opt="Select option: "
 set "opt=%opt: =%"
 if "%opt%"=="" (echo No input, exiting. & exit /b 1)
@@ -26,29 +24,16 @@ if "%opt%"=="" (echo No input, exiting. & exit /b 1)
 
 if "%opt%"=="1" python fill.py & goto :end
 if "%opt%"=="2" python scrape.py & python fill.py & goto :end
-if "%opt%"=="3" goto :codes
-if "%opt%"=="4" python fill.py --refresh & goto :end
-if "%opt%"=="5" goto :login
-if "%opt%"=="6" python build_woocommerce.py & goto :end
-if "%opt%"=="7" goto :settings
-if "%opt%"=="8" goto :download
+if "%opt%"=="3" python fill.py --categories-only & goto :end
+if "%opt%"=="4" goto :login
+if "%opt%"=="5" python build_woocommerce.py & goto :end
+if "%opt%"=="6" goto :download
 if "%opt%"=="0" exit /b 0
 echo Invalid option, try again.
 goto :menu
 
-:settings
-notepad "settings.json"
-goto :end
-
 :download
 python download_images.py
-goto :end
-
-:codes
-if not "%arg1%"=="" (set codes=%arg1% & goto :runcodes)
-set /p codes="Enter codes (comma-separated): "
-:runcodes
-python fill.py --codes %codes%
 goto :end
 
 :login

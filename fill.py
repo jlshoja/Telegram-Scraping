@@ -17,20 +17,111 @@ for _stream in (sys.stdout, sys.stderr):
 BASE_DIR = Path(__file__).resolve().parent
 POSTS_FILE = BASE_DIR / "cache/posts.json"
 SETTINGS = BASE_DIR / "settings.json"
-SRC = BASE_DIR / json.loads(SETTINGS.read_text(encoding="utf-8")) \
-    ["files"]["source"]
+_SETTINGS = json.loads(SETTINGS.read_text(encoding="utf-8"))
+SRC = BASE_DIR / _SETTINGS["files"]["source"]
+STD_CATS = BASE_DIR / _SETTINGS["files"]["standard_categories"]
+CATEGORY_ALIASES = _SETTINGS.get("category_aliases", {})
 REPORT = BASE_DIR / "report.txt"
 
 FIELDS = ["ابعاد", "جنس", "نوع بند", "کاربرد"]
 
+CATEGORY_SEP = re.compile(r"[|\-–—،,]")
 
-def usage_to_category(usage):
-    """دوشی | پاسپورتی  ->  کیف دوشی زنانه | کیف پاسپورتی زنانه"""
-    parts = [p.strip() for p in str(usage).split("|") if p.strip()]
-    out = []
+
+def strip_affixes(s):
+    """کیف دوشی زنانه -> دوشی"""
+    s = str(s).strip()
+    if s.startswith("کیف "):
+        s = s[4:].strip()
+    elif s == "کیف":
+        s = ""
+    for suf in (" زنانه", "زنانه"):
+        if s.endswith(suf):
+            s = s[:-len(suf)].strip()
+            break
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def load_standard_categories(path):
+    """Read standard_categories.xlsx -> {keyword: standard_subcategory}."""
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb.worksheets[0]
+    mapping = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        sub = row[1] if len(row) > 1 else None
+        if sub is None or str(sub).strip() in ("", "—", "-"):
+            continue
+        sub = str(sub).strip()
+        kw = strip_affixes(sub)
+        if kw:
+            mapping[kw] = sub
+    return mapping
+
+
+def standardize_category(raw, keyword_map, aliases):
+    """کیف دستی | کیف دوشی -> کیف دستی زنانه | کیف دوشی زنانه"""
+    parts = [p.strip() for p in CATEGORY_SEP.split(str(raw)) if p.strip()]
+    matched, unmatched = [], []
     for p in parts:
-        out.append(p if p.startswith("کیف") else f"کیف {p} زنانه")
-    return " | ".join(dict.fromkeys(out))
+        kw = strip_affixes(p)
+        kw = aliases.get(kw, kw)
+        if kw in keyword_map:
+            matched.append(keyword_map[kw])
+        else:
+            unmatched.append(p)
+    seen, out = set(), []
+    for m in matched:
+        if m not in seen:
+            seen.add(m)
+            out.append(m)
+    return (" | ".join(out) if out else None), unmatched
+
+
+def standardize_column(ws, header, std_map):
+    """Standardize the دسته بندی column in-place; return category stats."""
+    stats = {"category": [], "category_cleared": [], "category_empty": 0}
+    for row in range(2, ws.max_row + 1):
+        cat_cell = ws.cell(row, header["دسته بندی"])
+        raw = cat_cell.value
+        if raw in (None, ""):
+            stats["category_empty"] += 1
+            continue
+        standardized, unmatched = standardize_category(raw, std_map, CATEGORY_ALIASES)
+        if standardized is None:
+            cat_cell.value = None
+            stats["category_cleared"].append((row, raw, unmatched))
+        else:
+            cat_cell.value = standardized
+            stats["category"].append((row, raw, standardized, unmatched))
+    return stats
+
+
+def categories_only():
+    """Only standardize the دسته بندی column (no field filling)."""
+    wb = openpyxl.load_workbook(SRC)
+    ws = wb.worksheets[0]
+    header = {c.value: c.column for c in ws[1] if c.value}
+    if "دسته بندی" not in header:
+        raise SystemExit("missing column: دسته بندی")
+    std_map = load_standard_categories(STD_CATS)
+    stats = standardize_column(ws, header, std_map)
+    wb.save(SRC)
+    print(f"saved {SRC}")
+
+    lines = []
+    lines.append(f"== دسته بندی standardized ({len(stats['category'])}) ==")
+    for r, raw, std, un in stats["category"]:
+        warn = f"  [unmatched: {', '.join(un)}]" if un else ""
+        lines.append(f"  row {r}: {raw}  ->  {std}{warn}")
+    lines.append(f"== دسته بندی cleared ({len(stats['category_cleared'])}) ==")
+    for r, raw, un in stats["category_cleared"]:
+        lines.append(f"  row {r}: {raw}  ->  (empty)  [unmatched: {', '.join(un)}]")
+    lines.append(f"rows with empty category: {stats['category_empty']}")
+
+    Path(REPORT).write_text("\n".join(lines), encoding="utf-8")
+    print(f"report -> {REPORT}")
+    print(f"category_standardized={len(stats['category'])} "
+          f"category_cleared={len(stats['category_cleared'])}")
 
 
 def build_index(posts):
@@ -80,6 +171,10 @@ def best_candidate(cands, affinity):
 
 
 def main(args):
+    if args.categories_only:
+        categories_only()
+        return
+
     posts = json.loads(POSTS_FILE.read_text(encoding="utf-8"))
     print(f"loaded {len(posts)} posts")
     exact, nums = build_index(posts)
@@ -109,7 +204,7 @@ def main(args):
 
     stats = {"filled_rows": 0, "no_code": 0, "invalid": [], "not_found": [],
              "found_empty": [], "kept_existing": [], "ambiguous": [], "filled": [],
-             "category": []}
+             "category": [], "category_cleared": [], "category_empty": 0}
 
     for row, code, m, seller in parsed:
         if not code:
@@ -159,15 +254,8 @@ def main(args):
             stats["filled_rows"] += 1
             stats["filled"].append((row, code, post["channel"], post["id"], written))
 
-    for row in range(2, ws.max_row + 1):
-        cat_cell = ws.cell(row, header["دسته بندی"])
-        if cat_cell.value not in (None, "") and not args.refresh:
-            continue
-        usage = ws.cell(row, header["کاربرد"]).value
-        if usage in (None, ""):
-            continue
-        cat_cell.value = usage_to_category(usage)
-        stats["category"].append((row, usage, cat_cell.value))
+    std_map = load_standard_categories(STD_CATS)
+    stats.update(standardize_column(ws, header, std_map))
 
     wb.save(SRC)
     print(f"saved {SRC}")
@@ -185,9 +273,14 @@ def main(args):
     for r, c, ch, mid, f in stats["filled"]:
         vals = "; ".join(f"{k}={v}" for k, v in f.items())
         lines.append(f"  row {r}: {c}  [{ch} #{mid}]  {vals}")
-    lines.append(f"== دسته بندی derived from کاربرد ({len(stats['category'])}) ==")
-    for r, u, c in stats["category"]:
-        lines.append(f"  row {r}: {u}  ->  {c}")
+    lines.append(f"== دسته بندی standardized ({len(stats['category'])}) ==")
+    for r, raw, std, un in stats["category"]:
+        warn = f"  [unmatched: {', '.join(un)}]" if un else ""
+        lines.append(f"  row {r}: {raw}  ->  {std}{warn}")
+    lines.append(f"== دسته بندی cleared ({len(stats['category_cleared'])}) ==")
+    for r, raw, un in stats["category_cleared"]:
+        lines.append(f"  row {r}: {raw}  ->  (empty)  [unmatched: {', '.join(un)}]")
+    lines.append(f"rows with empty category: {stats['category_empty']}")
     lines.append(f"== invalid code ({len(stats['invalid'])}) ==")
     for r, c in stats["invalid"]:
         lines.append(f"  row {r}: {c}")
@@ -208,13 +301,17 @@ def main(args):
     Path(REPORT).write_text("\n".join(lines), encoding="utf-8")
     print(f"report -> {REPORT}")
     print(f"filled={stats['filled_rows']} not_found={len(stats['not_found'])} "
-          f"empty_post={len(stats['found_empty'])} invalid={len(stats['invalid'])}")
+          f"empty_post={len(stats['found_empty'])} invalid={len(stats['invalid'])} "
+          f"category_standardized={len(stats['category'])} "
+          f"category_cleared={len(stats['category_cleared'])}")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--refresh", action="store_true",
                     help="overwrite already-filled cells with fresh values")
+    ap.add_argument("--categories-only", action="store_true",
+                    help="only standardize the دسته بندی column (skip field filling)")
     ap.add_argument("--codes", default="",
                     help="only process these product codes, comma-separated (for testing)")
     args = ap.parse_args()

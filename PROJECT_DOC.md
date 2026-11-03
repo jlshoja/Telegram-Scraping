@@ -15,7 +15,7 @@
    - `نوع بند` (strap type)
    - `کاربرد` (usage: `دوشی | روزمره | اداری | مجلسی | کوله | پاسپورتی`, or fallback `دسته بندی` value)
 3. **Match** each row in `Product Database.xlsx` (key = `کد محصول` like `FA-1959`, `TR-402`, `BA-1481`, `SHK-649`, `MR-5161`, `MK-100231`) to the best Telegram post containing that code.
-4. **Fill** `Product Database.xlsx` in place (single file, no `- filled` copy) + derive `دسته بندی` from `کاربرد` (`کیف دوشی زنانه` etc.).
+4. **Fill** `Product Database.xlsx` in place (single file, no `- filled` copy) + standardize `دسته بندی` against `standard_categories.xlsx` (e.g. `کیف دوشی` → `کیف دوشی زنانه`).
 5. **Report** everything to `report.txt` (filled / not-found / ambiguous status).
 
 Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
@@ -31,10 +31,11 @@ Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
 | `fill.py` | Step 2: match posts → fill Excel + `report.txt` | yes |
 | `build_woocommerce.py` | Step 3: build `woocommerce_import.xlsx` from the filled DB; all fixed parameters (incl. the 39-column output header row) live in `settings.json` | yes |
 | `download_images.py` | Step 4: match DB codes (FA-1863 / 1863) to posts, download photos → `Product Images/<CODE>/` (photo 1 = `-main.webp`, rest `-02.…`; WebP ≤ `images.max_webp_kb`; videos skipped; skip folders that already have images unless `--refresh`) | yes |
-| `settings.json` | All fixed parameters: file paths, sheets, column headers, output header row, formats, image URL base, color aliases | yes |
+| `settings.json` | All fixed parameters: file paths (incl. `standard_categories`), sheets, column headers, output header row, formats, image URL base, color + category aliases | yes |
 | `color_mapping.xlsx` | Persian → English color map (re-read every run) | yes |
+| `standard_categories.xlsx` | Standard parent + subcategory list for `دسته بندی` (in `../Common Data/`, re-read every run) | yes |
 | `Product Images/<code>/` | Product pictures (never committed) | no (gitignored) |
-| `run.bat` | Windows menu: 8 options (fill / rescan / specific codes / refresh / login / build / edit settings / download images) | yes |
+| `run.bat` | Windows menu: 6 options (fill / rescan / fix categories / login / build / download images) | yes |
 | `RUNNING.md` | Original human run-guide (Persian-friendly, quickstart) | yes |
 | `requirements.txt` | `telethon>=1.40`, `python-dotenv>=1.0`, `openpyxl>=3.1` | yes |
 | `.env.example` | Template: `TELEGRAM_API_ID, TELEGRAM_API_HASH, TG_PHONE, TG_PASSWORD, TG_PROXY` | yes |
@@ -93,7 +94,7 @@ Sheet 1 (`worksheets[0]`), header row 1. Relevant columns:
 | `کد محصول` | product code `PREFIX-NUMBER` (e.g. `FA-1959`) | **match key**, regex `^([A-Z]+)-(\d+)$` after `normalize().upper()` |
 | `نام عکس محصول ` | photo filenames (note trailing space!) | not written by script (manual/downstream only) |
 | `نام محصول ` | product title | read-only |
-| `دسته بندی` (col 6) | category | derived from `کاربرد` via `usage_to_category()` |
+| `دسته بندی` (col 6) | category | standardized against `standard_categories.xlsx` (unmatched parts cleared + logged) |
 | `تعداد`, `فروشنده`, prices... | stock/seller/prices | `فروشنده` used for seller-affinity ranking |
 | `ابعاد` (col 11) | dimensions | filled from `extract_fields` |
 | `جنس` (col 12) | material | filled |
@@ -101,10 +102,10 @@ Sheet 1 (`worksheets[0]`), header row 1. Relevant columns:
 | `کاربرد` (col 14) | usage | filled |
 | `رنگ` | color | not filled by script |
 
-`fill.py` hardcodes: `FIELDS = ["ابعاد","جنس","نوع بند","کاربرد"]`, `COL = {ابعاد:11, جنس:12, نوع بند:13, کاربرد:14, دسته بندی:6}`.
+`fill.py` hardcodes `FIELDS = ["ابعاد","جنس","نوع بند","کاربرد"]`; column indices are resolved by header name (`header = {c.value: c.column for c in ws[1] if c.value}`), not hardcoded.
 It asserts `کد محصول, فروشنده, دسته بندی` + FIELDS headers exist or exits `missing column: X`.
 
-`usage_to_category("دوشی | پاسپورتی")` → `"کیف دوشی زنانه | کیف پاسپورتی زنانه"` (prefix `کیف`, suffix `زنانه` unless already starts with `کیف`).
+Category standardization: each `دسته بندی` value is split on `|`/`-`, each part is reduced to a keyword (strip `کیف` prefix + `زنانه` suffix, apply `category_aliases` typos) and matched to a subcategory in `standard_categories.xlsx`. Example: `"دوشی | پاسپورتی"` → `"کیف دوشی زنانه | کیف پاسپورتی زنانه"`. Parts with no match are cleared and logged.
 
 ---
 
@@ -160,15 +161,15 @@ Functions:
 - `build_seller_affinity(code_rows, nums)` — `{(seller, channel): weight}`; weight 3 if `code_kw` else 1. Captures "seller X's codes mostly appear in channel Y".
 - `score(mtype, fields)` = `60 (code_kw) | 40 (full) + 2*len(fields)`.
 - `best_candidate(cands, affinity)` — sort by `(affinity[channel], score, len(fields), len(text))` desc; returns `(top, tie_count>1?flag)`.
-- `usage_to_category(usage)` — see §4.
+- `strip_affixes(s)` → keyword; `load_standard_categories(path)` → `{keyword: standard_subcategory}`; `standardize_category(raw, map, aliases)` → `(joined | None, unmatched)` — see §4.
 - `main(args)` flow:
   1. Load posts, build index. Load workbook, resolve header names→columns.
   2. Parse rows: `code=normalize(str).upper()`, `m=re.match(^([A-Z]+)-(\d+)$)`. `--codes FA-1,TR-2` filters.
   3. Seller affinity from `[(row,seller,num)]`.
   4. Per row: empty→`no_code`; bad format→`invalid`; `cands = exact[code] or nums[number]` else `not_found` (+3 hint posts containing digits); affinity for this seller → `best_candidate` (ties→`ambiguous`); empty fields→`found_empty`; else write FIELDS cells only if empty unless `--refresh` (else `kept_existing`), count `filled_rows`.
-  5. Derive `دسته بندی` from `کاربرد` (skip if filled unless `--refresh`).
+  5. Standardize every non-empty `دسته بندی` cell against `standard_categories.xlsx` (always, independent of `--refresh`); cells whose parts match nothing are cleared and logged.
   6. Save `SRC` in place, write `REPORT` sections (see §8), print summary.
-- CLI: `--refresh, --codes "FA-1,TR-2"`.
+- CLI: `--refresh, --categories-only, --codes "FA-1,TR-2"`.
 
 Matching priority: exact code match beats bare-number match; `code_kw` (near `کد`) beats loose `PREFIX-NUM`; seller's usual channel wins; richer post wins. Bare-number fallback can mismatch — check `ambiguous` + hints in report.
 
@@ -181,15 +182,15 @@ Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout
 - Variations (`product_variation`, one per color): sku `{code}-{english-slug}`, same prices/tag, stock from `رنگ` pair (`آبی-2 | سبز-3`; Persian digits ok; missing number → `ناموجود` + warning), only color attribute (no strap).
 - Slugs: learned at runtime from the template file's variation rows, then `settings.json` (`colors.extra_slugs`, e.g. `عسلی→honey`); unknown colors skip that variation + warn (add slug to `settings`).
 - Row selection: valid `PREFIX-NUMBER` codes only; duplicates skipped. Products without images are skipped (`options.require_images`). CLI: `--settings`, `--codes`, `--src`, `--template`, `--out`, `--color-map`, `--images-dir`, `--image-base`.
-- `run.bat` option 6 runs it.
+- `run.bat` option 5 runs it.
 
 ---
 
 ## 6. Outputs
 
 - `cache/posts.json`: `[{channel:str(title), id:int, date:str, text:str(normalized)}]`.
-- `Product Database.xlsx`: source + filled cols 11–14 + col 6.
-- `report.txt` sections: `posts / rows filled / rows without code`, `seller -> channel used`, `filled`, `دسته بندی derived`, `invalid code`, `code not found`, `found post but no field extracted`, `ambiguous candidates`, `existing values kept`.
+- `Product Database.xlsx`: source + filled cols 11–14 + standardized col 6.
+- `report.txt` sections: `posts / rows filled / rows without code`, `seller -> channel used`, `filled`, `دسته بندی standardized`, `دسته بندی cleared`, `invalid code`, `code not found`, `found post but no field extracted`, `ambiguous candidates`, `existing values kept`.
 
 ---
 
@@ -202,7 +203,8 @@ Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout
 | Fill only (cached) | `python fill.py` |
 | Test subset | `python fill.py --codes FA-1959,TR-402` |
 | Overwrite old cells | `python fill.py --refresh` |
-| Menu | `run.bat` / `run.bat 2` / `run.bat 3 FA-1959,TR-402` |
+| Fix categories only | `python fill.py --categories-only` |
+| Menu | `run.bat` / `run.bat 2` / `run.bat 3` |
 | Check report | `type report.txt` |
 
 Rerun safety: `scrape.py` appends only new posts; `fill.py` keeps existing cells unless `--refresh`.
@@ -226,9 +228,9 @@ Rerun safety: `scrape.py` appends only new posts; `fill.py` keeps existing cells
 ## 9. Cookbook for future agents
 
 - **Add channel:** append URL to `Telegram channels.XLSX` col `link` → `python scrape.py` → `python fill.py`.
-- **Add output field** (e.g. `رنگ`): extend `extract_fields()` in `tgcommon.py` + add to `FIELDS`/`COL` in `fill.py` (find column index from header), test with `--codes`.
+- **Add output field** (e.g. `رنگ`): extend `extract_fields()` in `tgcommon.py` + add to `FIELDS` in `fill.py` (column index is resolved from the header), test with `--codes`.
 - **Fix bad parse:** add regex/regression in `tgcommon.py`; test: `python -c "from tgcommon import extract_fields; print(extract_fields('...'))"`.
-- **Change category rule:** edit `usage_to_category()` in `fill.py`.
+- **Change category rule:** edit `standard_categories.xlsx` (parent + subcategory) and `category_aliases` in `settings.json`; matching logic lives in `standardize_category()` in `fill.py`.
 - **Fresh rescan of one channel:** delete its posts from `cache/posts.json` or lower `--limit` for test.
 - **Debug match for one code:** `python fill.py --codes FA-1959` then read `report.txt` filled/ambiguous/not-found sections.
 - **Never:** commit `.env`, `cache/`, `*.session`; keep Persian headers byte-identical.

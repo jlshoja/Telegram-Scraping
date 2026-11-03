@@ -4,6 +4,7 @@
     "source_sheet": null,
     "output": "woocommerce_import.xlsx",
     "color_map": "../Common Data/color_mapping.xlsx",
+    "standard_categories": "../Common Data/standard_categories.xlsx",
     "images_dir": "../Image Processing/final image renamed"
   },
   "color_map": {
@@ -33,6 +34,11 @@
     "extra_slugs": {
       "عسلی": "honey"
     }
+  },
+  "category_aliases": {
+    "مجسلی": "مجلسی",
+    "ادرای": "اداری",
+    "رومزه": "روزمره"
   },
   "source_columns": {
     "code": "کد محصول",
