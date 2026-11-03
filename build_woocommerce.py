@@ -17,14 +17,16 @@ settings.json sections:
   values           attribute labels, category prefix, formats, regexes, ...
   options          require_images: skip products that have no picture
 
-Only products with a name, a price and pictures end up in the output file
-(options.require_images = false keeps products without pictures).
+Only products with a name and a price end up in the output file. Products
+without pictures are additionally required by default (options.require_images);
+pass --allow-no-images to export them too, leaving the image columns empty.
 
 Usage:
   python build_woocommerce.py
   python build_woocommerce.py --settings other.json
   python build_woocommerce.py --codes FA-1959,TR-402   # test subset
   python build_woocommerce.py --out woocommerce_import.xlsx
+  python build_woocommerce.py --allow-no-images        # ignore missing pictures
 """
 
 import argparse
@@ -359,6 +361,10 @@ def project_path(value):
 
 def main(args):
     configure(load_settings(project_path(args.settings)))
+    if args.allow_no_images:
+        # Build the sheet even when a product folder has no picture.
+        OPTIONS["require_images"] = False
+    require_images = OPTIONS.get("require_images", True)
 
     src_path = project_path(args.src or SRC)
     out_path = project_path(args.out or OUT)
@@ -480,8 +486,9 @@ def main(args):
         main_image, gallery_images = find_product_images(images_dir, code)
         if not main_image and not gallery_images:
             stats["no_images"] += 1
-            if OPTIONS.get("require_images", True):
+            if require_images:
                 continue
+            stats["products_without_images"] += 1
         else:
             stats["products_with_images"] += 1
 
@@ -586,15 +593,27 @@ def main(args):
 
     print(f"saved {out_path}: {stats['products']} products, "
           f"{stats['variations']} variations")
-    print(f"images: {stats['products_with_images']} products with folders, "
-          f"{stats['featured_images']} featured; variations: "
-          f"{stats['variation_images_color']} color-matched, "
-          f"{stats['variation_images_fallback']} fallback")
+    if require_images:
+        print(f"images: {stats['products_with_images']} products with folders, "
+              f"{stats['featured_images']} featured; variations: "
+              f"{stats['variation_images_color']} color-matched, "
+              f"{stats['variation_images_fallback']} fallback")
+    else:
+        print(f"images: {stats['products_with_images']} products with folders, "
+              f"{stats['products_without_images']} exported WITHOUT images, "
+              f"{stats['featured_images']} featured; variations: "
+              f"{stats['variation_images_color']} color-matched, "
+              f"{stats['variation_images_fallback']} fallback")
+        print("mode: --allow-no-images (image columns left empty when missing)")
     print(f"image url base: {image_base}")
     print(f"skipped: no_code={stats['no_code']} invalid={stats['invalid']} "
           f"no_name={stats['no_name']} no_price={stats['no_price']} "
           f"no_images={stats['no_images']} "
           f"duplicate={stats['duplicate']} unknown_slug={stats['unknown_slug']}")
+    if stats["products"] == 0:
+        print("WARNING: the sheet has no product rows (header only). "
+              "Check name/price columns and run with --allow-no-images "
+              "if the pictures are not downloaded yet.")
     if missing_colors:
         print(f"WARNING: colors missing from {color_map_path}: "
               + ", ".join(sorted(missing_colors)))
@@ -615,4 +634,8 @@ if __name__ == "__main__":
     ap.add_argument("--color-map", help="override settings.files.color_map")
     ap.add_argument("--images-dir", help="override settings.files.images_dir")
     ap.add_argument("--image-base", help="override settings.images.url_base")
+    ap.add_argument("--allow-no-images", action="store_true",
+                    help="export products even when no picture is downloaded "
+                         "(image columns stay empty); same as "
+                         "options.require_images = false")
     main(ap.parse_args())

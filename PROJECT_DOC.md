@@ -35,7 +35,7 @@ Current scale (Oct 2026): ~1637 cached posts, 1419 Excel rows.
 | `color_mapping.xlsx` | Persian → English color map (re-read every run) | yes |
 | `standard_categories.xlsx` | Standard parent + subcategory list for `دسته بندی` (in `../Common Data/`, re-read every run) | yes |
 | `Product Images/<code>/` | Product pictures (never committed) | no (gitignored) |
-| `run.bat` | Windows menu: 6 options (fill / rescan / fix categories / login / build / download images) | yes |
+| `run.bat` | Windows menu: 7 options (fill / rescan / fix categories / login / build / download images / build without images) | yes |
 | `RUNNING.md` | Original human run-guide (Persian-friendly, quickstart) | yes |
 | `requirements.txt` | `telethon>=1.40`, `python-dotenv>=1.0`, `openpyxl>=3.1` | yes |
 | `.env.example` | Template: `TELEGRAM_API_ID, TELEGRAM_API_HASH, TG_PHONE, TG_PASSWORD, TG_PROXY` | yes |
@@ -175,14 +175,14 @@ Matching priority: exact code match beats bare-number match; `code_kw` (near `ک
 
 ### 5.4 `build_woocommerce.py` — WooCommerce import sheet
 
-Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name, a price and images are exported; the output file is never merged back anywhere.
+Builds `woocommerce_import.xlsx` from `Product Database.xlsx`. The column layout (39 ordered headers) comes from `settings.json` → `output_headers`. Only products with a name and a price are exported; pictures are required by default (`options.require_images`) but `--allow-no-images` exports products with empty image columns too. The output file is never merged back anywhere.
 
 - Source columns looked up **by header name**: `کد محصول`, `نام محصول `, `اسامی محصولات`, `دسته بندی`, `قیمت فروش`, `قیمت فروش تخفیف خورده`, `ابعاد`, `جنس`, `نوع بند`, `کاربرد`, `رنگ`.
 - Parent (`product`): title `{نام محصول} کد {کد}` (fallback `اسامی محصولات`; `ندارد`/empty → row skipped); sku = full code; `regular_price` ← `قیمت فروش` (missing → row skipped); `sale_price` + `sale_tag=تخفیف خورده‌ها` ← discount col (same value on parent + all variations); `manage_stock=yes`, parent stock empty; categories `کیف زنانه>{value}` joined ` | `; images all empty; attributes only when non-empty: color (`رنگ` names joined `|`), application (`کاربرد`), material (`جنس`), dimention (`ابعاد` raw), strap (`نوع بند` raw, `attribute:strap` / `attribute_name:strap` = `بند`, parent only).
 - Variations (`product_variation`, one per color): sku `{code}-{english-slug}`, same prices/tag, stock from `رنگ` pair (`آبی-2 | سبز-3`; Persian digits ok; missing number → `ناموجود` + warning), only color attribute (no strap).
 - Slugs: learned at runtime from the template file's variation rows, then `settings.json` (`colors.extra_slugs`, e.g. `عسلی→honey`); unknown colors skip that variation + warn (add slug to `settings`).
-- Row selection: valid `PREFIX-NUMBER` codes only; duplicates skipped. Products without images are skipped (`options.require_images`). CLI: `--settings`, `--codes`, `--src`, `--template`, `--out`, `--color-map`, `--images-dir`, `--image-base`.
-- `run.bat` option 5 runs it.
+- Row selection: valid `PREFIX-NUMBER` codes only; duplicates skipped. Products without images are skipped unless `options.require_images` is false or `--allow-no-images` is passed (the sheet is then built with the image columns left empty; variations are still exported). CLI: `--settings`, `--codes`, `--src`, `--template`, `--out`, `--color-map`, `--images-dir`, `--image-base`, `--allow-no-images`.
+- `run.bat` option 5 runs it (images required); option 7 runs it with `--allow-no-images`.
 
 ---
 

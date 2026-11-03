@@ -93,6 +93,7 @@ python fill.py --refresh   # refresh text fields
 | **Refresh old values** | `python fill.py --refresh` |
 | **Re‑scan channels** | `python scrape.py` then `python fill.py` |
 | **Build WooCommerce import** | `python build_woocommerce.py` (needs `قیمت فروش` + `رنگ` filled first) |
+| **Build import without images** | `python build_woocommerce.py --allow-no-images` (or `run.bat 7`) — exports every priced product even if its picture folder is empty |
 | **Check the report** | `type report.txt` or open `report.txt` |
 
 ### 6️⃣ File overview

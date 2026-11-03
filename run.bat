@@ -13,6 +13,7 @@ echo   3. Fix categories (standardize category)
 echo   4. Telegram login (first time only)
 echo   5. Build WooCommerce import sheet
 echo   6. Download product images
+echo   7. Build import sheet (allow products without images)
 echo   0. Exit
 echo  ========================================
 if not "%~1"=="" (set "opt=%~1" & goto :run)
@@ -28,12 +29,18 @@ if "%opt%"=="3" python fill.py --categories-only & goto :end
 if "%opt%"=="4" goto :login
 if "%opt%"=="5" python build_woocommerce.py & goto :end
 if "%opt%"=="6" goto :download
+if "%opt%"=="7" goto :buildnoimg
 if "%opt%"=="0" exit /b 0
 echo Invalid option, try again.
 goto :menu
 
 :download
 python download_images.py
+goto :end
+
+:buildnoimg
+echo Building woocommerce_import.xlsx WITHOUT requiring product images...
+python build_woocommerce.py --allow-no-images
 goto :end
 
 :login
